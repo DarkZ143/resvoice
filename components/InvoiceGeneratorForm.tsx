@@ -14,6 +14,7 @@ import {
   CalendarDays,
   CreditCard,
   BadgeIndianRupee,
+  MapPinned,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -33,6 +34,49 @@ const COMPANY_NAME = "Restore Health Services";
 
 const COMPANY_ADDRESS =
   "A-1, Ground Floor, Sector 59, Noida, Gautam Buddha Nagar, UttarPradesh, 201301";
+
+/* =========================================================
+   INDIAN STATES + UNION TERRITORIES
+========================================================= */
+
+const INDIAN_STATES = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry",
+];
 
 /* =========================================================
    FAMILY OPTIONS
@@ -151,9 +195,7 @@ export function InvoiceGeneratorForm({
   onReset,
 }: InvoiceGeneratorFormProps) {
   /* =======================================================
-     BASE PRICE LOCAL INPUT
-
-     This keeps the visual input blank instead of showing 0.
+     BASE PRICE INPUT
   ======================================================== */
 
   const [basePriceInput, setBasePriceInput] = useState(
@@ -161,9 +203,7 @@ export function InvoiceGeneratorForm({
   );
 
   /* =======================================================
-     GST AMOUNT LOCAL INPUT
-
-     Same behavior as Base Price.
+     GST INPUT
   ======================================================== */
 
   const [gstAmountInput, setGstAmountInput] = useState(
@@ -181,7 +221,7 @@ export function InvoiceGeneratorForm({
   }, [invoiceData.basePrice]);
 
   /* =======================================================
-     SYNC GST AMOUNT
+     SYNC GST
   ======================================================== */
 
   useEffect(() => {
@@ -192,10 +232,6 @@ export function InvoiceGeneratorForm({
 
   /* =======================================================
      PRICING
-
-     IMPORTANT:
-     GST is NOT calculated here.
-     Admin enters gstAmount manually.
   ======================================================== */
 
   const basePrice = Number(invoiceData.basePrice) || 0;
@@ -205,14 +241,10 @@ export function InvoiceGeneratorForm({
   const totalAmount = basePrice + gstAmount;
 
   /* =======================================================
-     CUSTOM PLAN
+     SELECTED PLAN
   ======================================================== */
 
   const isCustomPlan = invoiceData.planName === "Custom Plan";
-
-  /* =======================================================
-     SELECTED PLAN
-  ======================================================== */
 
   const selectedPlan =
     PLAN_OPTIONS.find(
@@ -227,7 +259,7 @@ export function InvoiceGeneratorForm({
     );
 
   /* =======================================================
-     GENERIC INPUT HANDLER
+     GENERIC INPUT
   ======================================================== */
 
   const handleInputChange = (
@@ -247,13 +279,6 @@ export function InvoiceGeneratorForm({
   const handleSelectPlan = (plan: (typeof PLAN_OPTIONS)[number]) => {
     const description = getFamilyDescription(plan.family);
 
-    /*
-     * Predefined plan automatically
-     * starts with the equivalent 5% GST.
-     *
-     * Admin can still edit the GST
-     * amount afterward.
-     */
     const defaultGSTAmount = (plan.price * GST_RATE) / 100;
 
     setBasePriceInput(String(plan.price));
@@ -296,7 +321,7 @@ export function InvoiceGeneratorForm({
   };
 
   /* =======================================================
-     FAMILY
+     FAMILY CHANGE
   ======================================================== */
 
   const handleFamilyChange = (family: string) => {
@@ -324,7 +349,6 @@ export function InvoiceGeneratorForm({
 
   /* =======================================================
      BASE PRICE
-     
      NUMBERS ONLY
   ======================================================== */
 
@@ -341,10 +365,7 @@ export function InvoiceGeneratorForm({
 
   /* =======================================================
      GST AMOUNT
-     
      NUMBERS ONLY
-     
-     NO FORMULA
   ======================================================== */
 
   const handleGSTAmountChange = (value: string) => {
@@ -359,10 +380,32 @@ export function InvoiceGeneratorForm({
   };
 
   /* =======================================================
+     PINCODE
+     NUMBERS ONLY
+     EXACTLY 6 DIGITS
+  ======================================================== */
+
+  const handlePincodeChange = (value: string) => {
+    const numericValue = value.replace(/\D/g, "").slice(0, 6);
+
+    onChange({
+      ...invoiceData,
+      pincode: numericValue,
+    });
+  };
+
+  /* =======================================================
      GENERATE
   ======================================================== */
 
   const handleGenerate = () => {
+    const pincode = invoiceData.pincode?.trim() || "";
+
+    if (pincode && pincode.length !== 6) {
+      window.alert("Please enter a valid 6-digit pincode.");
+      return;
+    }
+
     onGenerate();
   };
 
@@ -559,7 +602,7 @@ export function InvoiceGeneratorForm({
                 </div>
               </div>
 
-              {/* INVOICE DATE */}
+              {/* ISSUE DATE */}
 
               <div>
                 <label
@@ -746,26 +789,104 @@ export function InvoiceGeneratorForm({
                 </div>
               </div>
 
-              {/* STATE */}
+              {/* STATE / PINCODE */}
 
-              <div>
-                <label
-                  htmlFor="state-input"
-                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
-                >
-                  State
-                </label>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* STATE */}
 
-                <input
-                  id="state-input"
-                  type="text"
-                  value={invoiceData.state}
-                  onChange={(event) =>
-                    handleInputChange("state", event.target.value)
-                  }
-                  placeholder="Enter state"
-                  className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
-                />
+                <div>
+                  <label
+                    htmlFor="state-input"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                  >
+                    State
+                  </label>
+
+                  <div className="relative">
+                    <MapPinned className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                    <select
+                      id="state-input"
+                      required
+                      value={invoiceData.state}
+                      onChange={(event) =>
+                        handleInputChange("state", event.target.value)
+                      }
+                      className="w-full appearance-none rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    >
+                      <option value="">Select State</option>
+
+                      {INDIAN_STATES.map((state) => (
+                        <option key={state} value={state}>
+                          {state}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* PINCODE */}
+
+                <div>
+                  <label
+                    htmlFor="pincode-input"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                  >
+                    Pincode
+                  </label>
+
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                    <input
+                      id="pincode-input"
+                      required
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{6}"
+                      maxLength={6}
+                      value={invoiceData.pincode}
+                      onChange={(event) =>
+                        handlePincodeChange(event.target.value)
+                      }
+                      onKeyDown={(event) => {
+                        const allowedKeys = [
+                          "Backspace",
+                          "Delete",
+                          "Tab",
+                          "ArrowLeft",
+                          "ArrowRight",
+                          "Home",
+                          "End",
+                        ];
+
+                        if (allowedKeys.includes(event.key)) {
+                          return;
+                        }
+
+                        if (!/^\d$/.test(event.key)) {
+                          event.preventDefault();
+                        }
+                      }}
+                      onPaste={(event) => {
+                        event.preventDefault();
+
+                        const pasted = event.clipboardData
+                          .getData("text")
+                          .replace(/\D/g, "")
+                          .slice(0, 6);
+
+                        handlePincodeChange(pasted);
+                      }}
+                      placeholder="6-digit pincode"
+                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    />
+                  </div>
+
+                  <p className="mt-1.5 text-[9px] text-[#819189]">
+                    Enter exactly 6 digits.
+                  </p>
+                </div>
               </div>
             </div>
           </section>
@@ -800,8 +921,6 @@ export function InvoiceGeneratorForm({
             </div>
 
             <div className="space-y-2.5 px-5 py-5 sm:px-6">
-              {/* PREDEFINED PLANS */}
-
               {PLAN_OPTIONS.map((plan) => {
                 const isSelected = selectedPlan?.id === plan.id;
 
@@ -825,8 +944,6 @@ export function InvoiceGeneratorForm({
                     }`}
                   >
                     <div className="flex items-center gap-3 p-3.5 sm:p-4">
-                      {/* ICON */}
-
                       <div
                         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
                           plan.featured
@@ -842,8 +959,6 @@ export function InvoiceGeneratorForm({
                           <Hospital className="h-5 w-5" />
                         )}
                       </div>
-
-                      {/* INFORMATION */}
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -874,8 +989,6 @@ export function InvoiceGeneratorForm({
                         </span>
                       </div>
 
-                      {/* PRICE */}
-
                       <div className="shrink-0 text-right">
                         <p
                           className={`text-base font-extrabold sm:text-xl ${
@@ -894,17 +1007,7 @@ export function InvoiceGeneratorForm({
                         </p>
                       </div>
 
-                      {/* ARROW */}
-
-                      <div
-                        className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-full sm:flex ${
-                          isSelected
-                            ? plan.featured
-                              ? "bg-[#d98200] text-white"
-                              : "bg-[#176746] text-white"
-                            : "bg-[#eff5f1] text-[#376151]"
-                        }`}
-                      >
+                      <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eff5f1] text-[#376151] sm:flex">
                         <ChevronRight className="h-4 w-4" />
                       </div>
                     </div>
@@ -942,13 +1045,8 @@ export function InvoiceGeneratorForm({
                     </div>
 
                     <p className="mt-0.5 text-xs font-medium text-[#587067]">
-                      Choose family, enter validity, base price and GST amount.
+                      Choose family, validity, base price and GST amount.
                     </p>
-
-                    <span className="mt-1.5 inline-block rounded border border-[#cbded2] bg-white px-2 py-0.5 text-[8px] font-medium text-[#5a7469]">
-                      GST 5% label remains fixed • GST amount is manually
-                      entered
-                    </span>
                   </div>
 
                   <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eff5f1] text-[#376151] sm:flex">
@@ -956,14 +1054,6 @@ export function InvoiceGeneratorForm({
                   </div>
                 </div>
               </button>
-            </div>
-
-            <div className="border-t border-[#e4ece7] px-5 py-3 sm:px-6">
-              <p className="text-center text-[9px] leading-relaxed text-[#70837a]">
-                ✓ Family options: 1A, 2A and 2A + 2C. Plan description is
-                automatically assigned according to family and cannot be
-                manually changed.
-              </p>
             </div>
           </section>
 
@@ -1016,13 +1106,9 @@ export function InvoiceGeneratorForm({
 
                   <option value="2A + 2C">2A + 2C</option>
                 </select>
-
-                <p className="mt-1.5 text-[9px] text-[#819189]">
-                  Description automatically changes with the selected family.
-                </p>
               </div>
 
-              {/* PLAN DESCRIPTION */}
+              {/* DESCRIPTION */}
 
               <div>
                 <label
@@ -1044,8 +1130,7 @@ export function InvoiceGeneratorForm({
                 />
 
                 <p className="mt-1.5 text-[9px] text-[#819189]">
-                  Automatically assigned based on family. This field cannot be
-                  changed.
+                  Automatically assigned based on family.
                 </p>
               </div>
 
@@ -1122,9 +1207,9 @@ export function InvoiceGeneratorForm({
                       onPaste={(event) => {
                         event.preventDefault();
 
-                        const pastedText = event.clipboardData.getData("text");
-
-                        handleBasePriceChange(pastedText);
+                        handleBasePriceChange(
+                          event.clipboardData.getData("text"),
+                        );
                       }}
                       placeholder="Enter amount"
                       className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
@@ -1184,9 +1269,9 @@ export function InvoiceGeneratorForm({
                     onPaste={(event) => {
                       event.preventDefault();
 
-                      const pastedText = event.clipboardData.getData("text");
-
-                      handleGSTAmountChange(pastedText);
+                      handleGSTAmountChange(
+                        event.clipboardData.getData("text"),
+                      );
                     }}
                     placeholder="Enter GST amount"
                     className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
@@ -1194,18 +1279,18 @@ export function InvoiceGeneratorForm({
                 </div>
 
                 <p className="mt-1.5 text-[9px] text-[#819189]">
-                  GST rate is fixed at 5%. Enter the actual GST amount manually.
+                  GST rate remains fixed at 5%. Enter the actual GST amount.
                 </p>
               </div>
 
-              {/* GST RATE DISPLAY */}
+              {/* GST RATE */}
 
               <div className="flex items-center justify-between rounded-xl border border-[#d4e5d9] bg-[#f4faf4] px-4 py-3">
                 <div>
                   <p className="text-sm font-bold text-[#24493b]">GST Rate</p>
 
                   <p className="text-[9px] text-[#75887f]">
-                    Rate shown for invoice reference only.
+                    Reference rate shown on the invoice.
                   </p>
                 </div>
 
@@ -1229,8 +1314,6 @@ export function InvoiceGeneratorForm({
 
             <div className="p-5 sm:p-6">
               <div className="space-y-3">
-                {/* BASE */}
-
                 <div className="flex items-center justify-between border-b border-[#e3ebe6] pb-3">
                   <span className="text-sm text-[#61756c]">Base Price</span>
 
@@ -1238,8 +1321,6 @@ export function InvoiceGeneratorForm({
                     ₹{formatINR(basePrice)}
                   </span>
                 </div>
-
-                {/* GST */}
 
                 <div className="flex items-center justify-between border-b border-[#e3ebe6] pb-3">
                   <span className="text-sm text-[#61756c]">GST (5%)</span>
@@ -1249,8 +1330,6 @@ export function InvoiceGeneratorForm({
                   </span>
                 </div>
 
-                {/* TOTAL */}
-
                 <div className="flex items-center justify-between pt-1">
                   <div>
                     <p className="text-sm font-extrabold uppercase text-[#176746]">
@@ -1258,7 +1337,7 @@ export function InvoiceGeneratorForm({
                     </p>
 
                     <p className="mt-0.5 text-[9px] text-[#7b8d85]">
-                      Base Price + Entered GST
+                      Base Price + GST Amount
                     </p>
                   </div>
 
@@ -1271,7 +1350,7 @@ export function InvoiceGeneratorForm({
           </section>
 
           {/* =====================================================
-              INCLUDED BENEFITS
+              BENEFITS
           ====================================================== */}
 
           <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">

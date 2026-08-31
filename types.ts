@@ -1,20 +1,12 @@
 export interface BenefitItem {
   id: string;
-
   title: string;
-
   category: string;
-
   badgeText: string;
-
   shortDesc: string;
-
   details: string[];
-
   imageUrl?: string;
-
   iconName: string;
-
   included: boolean;
 }
 
@@ -39,6 +31,8 @@ export interface InvoiceData {
 
   state: string;
 
+  pincode: string;
+
   // =========================================================
   // Plan
   // =========================================================
@@ -59,13 +53,12 @@ export interface InvoiceData {
 
   /*
    * GST rate is fixed/reference at 5%.
-   * Actual GST amount is entered manually
-   * by the admin.
    */
   gstRate: number;
 
   /*
-   * Manually entered GST amount.
+   * Actual GST amount is manually entered
+   * by the admin.
    */
   gstAmount: number;
 

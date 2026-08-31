@@ -16,6 +16,7 @@ export const initialInvoiceData: InvoiceData = {
   phoneNumber: "",
   city: "",
   state: "",
+  pincode: "",
 
   // =====================================================
   // PLAN DETAILS
@@ -29,21 +30,19 @@ export const initialInvoiceData: InvoiceData = {
   // PRICING
   //
   // GST rate is fixed at 5%.
-  // Actual GST amount is entered manually.
+  // Actual GST amount is entered manually by admin.
   // =====================================================
   basePrice: 0,
-
   gstRate: 5,
-
   gstAmount: 0,
-
   currency: "₹",
 
   // =====================================================
   // PAYMENT STATUS
+  //
+  // CUSTOM is supported from the payment dropdown.
   // =====================================================
   paymentStatus: "PAID IN FULL",
-
   customPaymentStatus: "",
 
   // =====================================================
