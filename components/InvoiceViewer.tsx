@@ -79,25 +79,74 @@ const formatInvoiceDate = (value: string) => {
 };
 
 /* ==========================================================
-   SMALL COMPONENTS
+   INVOICE LOGO
+   Normal img is used inside the PDF document because it
+   is more reliable with html2canvas.
+========================================================== */
+
+function InvoiceLogo({ className = "" }: { className?: string }) {
+  return (
+    <img
+      src="/logo.png"
+      alt={COMPANY_NAME}
+      draggable={false}
+      className={`block object-contain ${className}`}
+    />
+  );
+}
+
+/* ==========================================================
+   WAIT FOR IMAGES
+========================================================== */
+
+const waitForImages = async (root: HTMLElement) => {
+  const images = Array.from(root.querySelectorAll("img"));
+
+  await Promise.all(
+    images.map(
+      (image) =>
+        new Promise<void>((resolve) => {
+          if (image.complete && image.naturalWidth > 0) {
+            resolve();
+            return;
+          }
+
+          const finish = () => resolve();
+
+          image.addEventListener("load", finish, { once: true });
+
+          image.addEventListener("error", finish, { once: true });
+        }),
+    ),
+  );
+};
+
+/* ==========================================================
+   INFO CELL
 ========================================================== */
 
 function InfoCell({ label, value }: { label: string; value: string }) {
   return (
-    <div className="border-r border-[#dbe8df] p-4 last:border-r-0">
+    <div className="min-w-0 border-r border-[#dbe8df] p-4 last:border-r-0">
       <div className="mb-2 text-[9px] font-bold uppercase tracking-wider text-[#8a9a93]">
         {label}
       </div>
 
-      <div className="text-sm font-bold text-[#18352c]">{value || "-"}</div>
+      <div className="break-words text-sm font-bold text-[#18352c]">
+        {value || "-"}
+      </div>
     </div>
   );
 }
 
+/* ==========================================================
+   BENEFIT ROW
+========================================================== */
+
 function BenefitRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid grid-cols-[1fr_auto] gap-3 border-b border-[#e5ece8] px-3 py-3 last:border-b-0">
-      <div className="whitespace-pre-line text-[10px] leading-relaxed text-[#33463f]">
+      <div className="whitespace-pre-line break-words text-[10px] leading-relaxed text-[#33463f]">
         {label}
       </div>
 
@@ -140,36 +189,22 @@ export function InvoiceViewer({
   const invoiceDate = formatInvoiceDate(invoiceData.issueDate);
 
   /* ========================================================
-     FAMILY
+     PLAN
   ======================================================== */
 
   const family = invoiceData.family?.trim() || "—";
 
-  /* ========================================================
-     PLAN DESCRIPTION
-     
-     Always derive description from family.
-     Admin cannot accidentally create a mismatched
-     description in the generated invoice.
-  ======================================================== */
+  const planName = invoiceData.planName?.trim() || "Plan";
 
+  /*
+   * Description is determined from family.
+   * This protects the final invoice from stale
+   * description data.
+   */
   const planDescription =
     FAMILY_DESCRIPTIONS[family] ||
     invoiceData.planDescription?.trim() ||
     "Health plan membership";
-
-  /* ========================================================
-     PLAN NAME
-
-     Kept internally for the invoice because the actual
-     selected plan is still required in the generated invoice.
-  ======================================================== */
-
-  const planName = invoiceData.planName?.trim() || "Plan";
-
-  /* ========================================================
-     VALIDITY
-  ======================================================== */
 
   const validity = invoiceData.tenure?.trim() || "1 Year";
 
@@ -183,7 +218,94 @@ export function InvoiceViewer({
       : invoiceData.paymentStatus?.trim() || "PAID IN FULL";
 
   /* ========================================================
+     CAPTURE ONE A4 PAGE
+  ======================================================== */
+
+  const capturePage = async (
+    element: HTMLElement,
+    html2canvas: typeof import("html2canvas").default,
+  ) => {
+    /*
+     * Wait until every image inside the page
+     * has either loaded successfully or failed.
+     */
+    await waitForImages(element);
+
+    /*
+     * Allow layout/fonts/image rendering to settle.
+     */
+    await new Promise<void>((resolve) => setTimeout(resolve, 300));
+
+    /*
+     * Force a fixed A4 CSS width while capturing.
+     */
+    const previousWidth = element.style.width;
+
+    const previousMaxWidth = element.style.maxWidth;
+
+    const previousMinWidth = element.style.minWidth;
+
+    const previousHeight = element.style.height;
+
+    const previousMinHeight = element.style.minHeight;
+
+    element.style.width = "794px";
+
+    element.style.maxWidth = "794px";
+
+    element.style.minWidth = "794px";
+
+    element.style.height = "1123px";
+
+    element.style.minHeight = "1123px";
+
+    try {
+      return await html2canvas(element, {
+        scale: 2,
+
+        useCORS: true,
+
+        allowTaint: false,
+
+        backgroundColor: "#ffffff",
+
+        logging: false,
+
+        x: 0,
+        y: 0,
+
+        scrollX: 0,
+        scrollY: 0,
+
+        width: 794,
+
+        height: 1123,
+
+        windowWidth: 794,
+
+        windowHeight: 1123,
+
+        imageTimeout: 15000,
+      });
+    } finally {
+      element.style.width = previousWidth;
+
+      element.style.maxWidth = previousMaxWidth;
+
+      element.style.minWidth = previousMinWidth;
+
+      element.style.height = previousHeight;
+
+      element.style.minHeight = previousMinHeight;
+    }
+  };
+
+  /* ========================================================
      DOWNLOAD PDF
+     
+     EXACTLY:
+     Page 1 -> PDF Page 1
+     Page 2 -> PDF Page 2
   ======================================================== */
 
   const handleDownloadPDF = async () => {
@@ -192,10 +314,12 @@ export function InvoiceViewer({
     setIsGeneratingPDF(true);
 
     try {
-      const element = document.getElementById("invoice-document");
+      const page1 = document.getElementById("invoice-page-1");
 
-      if (!element) {
-        throw new Error("Invoice document not found.");
+      const page2 = document.getElementById("invoice-page-2");
+
+      if (!page1 || !page2) {
+        throw new Error("Invoice pages not found.");
       }
 
       const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
@@ -203,87 +327,123 @@ export function InvoiceViewer({
         import("jspdf"),
       ]);
 
-      await new Promise((resolve) => setTimeout(resolve, 300));
+      /* ================================================
+           CAPTURE PAGE 1
+        ================================================= */
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        scrollX: 0,
-        scrollY: -window.scrollY,
-        windowWidth: 794,
-      });
+      const canvas1 = await capturePage(page1, html2canvas);
 
-      const imageData = canvas.toDataURL("image/jpeg", 0.98);
+      /* ================================================
+           CAPTURE PAGE 2
+        ================================================= */
+
+      const canvas2 = await capturePage(page2, html2canvas);
+
+      /* ================================================
+           CREATE EXACT A4 PDF
+        ================================================= */
 
       const pdf = new jsPDF({
         orientation: "portrait",
+
         unit: "mm",
+
         format: "a4",
+
         compress: true,
       });
 
-      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pdfWidth = pdf.internal.pageSize.getWidth();
 
-      const pageHeight = pdf.internal.pageSize.getHeight();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      const margin = 8;
+      /*
+       * Keep a very small safe border.
+       */
+      const margin = 4;
 
-      const printableWidth = pageWidth - margin * 2;
+      const printableWidth = pdfWidth - margin * 2;
 
-      const printableHeight = pageHeight - margin * 2;
+      const printableHeight = pdfHeight - margin * 2;
 
-      const imageHeight = (canvas.height * printableWidth) / canvas.width;
+      /* ================================================
+           ADD CANVAS TO PAGE
+        ================================================= */
 
-      let remainingHeight = imageHeight;
+      const addCanvasToPage = (canvas: HTMLCanvasElement) => {
+        /*
+         * Fit entire canvas into A4.
+         *
+         * This uses MIN so nothing can be
+         * cropped from any side.
+         */
+        const scale = Math.min(
+          printableWidth / canvas.width,
 
-      let y = margin;
+          printableHeight / canvas.height,
+        );
 
-      pdf.addImage(
-        imageData,
-        "JPEG",
-        margin,
-        y,
-        printableWidth,
-        imageHeight,
-        undefined,
-        "FAST",
-      );
+        const imageWidth = canvas.width * scale;
 
-      remainingHeight -= printableHeight;
+        const imageHeight = canvas.height * scale;
 
-      while (remainingHeight > 0) {
-        pdf.addPage();
+        /*
+         * Center the entire image.
+         */
+        const x = (pdfWidth - imageWidth) / 2;
 
-        y = margin - (imageHeight - remainingHeight);
+        const y = (pdfHeight - imageHeight) / 2;
 
         pdf.addImage(
-          imageData,
+          canvas.toDataURL("image/jpeg", 0.97),
           "JPEG",
-          margin,
+          x,
           y,
-          printableWidth,
+          imageWidth,
           imageHeight,
           undefined,
           "FAST",
         );
+      };
 
-        remainingHeight -= printableHeight;
-      }
+      /* ================================================
+           PDF PAGE 1
+        ================================================= */
 
-      const cleanFileName = (value: string) =>
-        value
-          .replace(/[^a-zA-Z0-9\s_-]/g, "")
-          .trim()
-          .replace(/\s+/g, "-");
+      addCanvasToPage(canvas1);
 
-      const customer = cleanFileName(invoiceData.customerName || "Customer");
+      /* ================================================
+           PDF PAGE 2
+        ================================================= */
 
-      const plan = cleanFileName(planName);
+      pdf.addPage();
 
-      pdf.save(`${customer}-${plan}-Invoice.pdf`);
+      addCanvasToPage(canvas2);
+
+      /* ================================================
+           PHONE NUMBER FILE NAME
+        ================================================= */
+
+      /*
+       * Only numeric characters are kept.
+       *
+       * Example:
+       * +91 98765 43210
+       * ->
+       * 919876543210-Invoice.pdf
+       */
+      const phoneNumber = (invoiceData.phoneNumber || "").replace(/\D/g, "");
+
+      const fileName = `${phoneNumber || "Customer"}-Invoice.pdf`;
+
+      /*
+       * Exactly TWO PDF pages.
+       */
+      pdf.save(fileName);
+
+      /* ================================================
+           SUCCESS EFFECT
+        ================================================= */
 
       try {
         confetti({
@@ -294,7 +454,7 @@ export function InvoiceViewer({
           },
         });
       } catch {
-        // Optional animation.
+        // Optional effect.
       }
     } catch (error) {
       console.error("PDF generation error:", error);
@@ -350,7 +510,7 @@ Payment Status: ${paymentStatus}`;
   return (
     <div className="min-h-screen bg-[#eef3ef] text-[#17342b]">
       {/* =====================================================
-          TOP NAVIGATION
+          VIEWER NAVIGATION
       ====================================================== */}
 
       <header className="no-print sticky top-0 z-50 border-b border-[#d7e2dc] bg-white/95 backdrop-blur">
@@ -415,28 +575,29 @@ Payment Status: ${paymentStatus}`;
       <main className="px-3 py-8 sm:px-6">
         <div
           ref={invoiceDocRef}
-          id="invoice-document"
           className="mx-auto w-full max-w-[794px] bg-white text-[#18352c] shadow-xl"
         >
           {/* =================================================
               PAGE 1
           ================================================= */}
 
-          <section className="relative min-h-[1123px] bg-white p-7 sm:p-10">
+          <section
+            id="invoice-page-1"
+            className="relative box-border h-[1123px] w-full overflow-visible bg-white p-7 sm:p-10"
+          >
             {/* HEADER */}
 
-            <div className="flex items-start justify-between gap-8 border-b border-[#dce7df] pb-6">
+            <div className="flex items-start justify-between gap-6 border-b border-[#dce7df] pb-6">
               {/* COMPANY */}
 
-              <div className="flex min-w-0 items-start gap-5">
-                <Image
-                  src="/logo.png"
-                  alt={COMPANY_NAME}
-                  width={105}
-                  height={90}
-                  priority
-                  className="h-[82px] w-auto shrink-0 object-contain"
-                />
+              <div className="flex min-w-0 flex-1 items-start gap-5">
+                {/* LOGO */}
+
+                <div className="flex h-[82px] w-[105px] shrink-0 items-center justify-center overflow-visible">
+                  <InvoiceLogo className="h-auto w-auto max-h-[82px] max-w-[105px]" />
+                </div>
+
+                {/* COMPANY TEXT */}
 
                 <div className="min-w-0">
                   <p className="text-[12px] font-bold uppercase tracking-[0.09em] text-[#176746]">
@@ -447,24 +608,21 @@ Payment Status: ${paymentStatus}`;
                     {COMPANY_NAME}
                   </h1>
 
-                  {/* ADDRESS */}
-
                   <p className="mt-2 max-w-[390px] text-[10px] leading-relaxed text-[#63776e]">
                     {COMPANY_ADDRESS}
                   </p>
 
-                  {/* GSTIN */}
+                  <div className="mt-2 space-y-0.5 text-[9px] font-bold tracking-wide text-[#536c61]">
+                    <p>
+                      GSTIN :{" "}
+                      <span className="text-[#176746]">{COMPANY_GSTIN}</span>
+                    </p>
 
-                  <p className="mt-2 text-[9px] font-bold tracking-wide text-[#536c61]">
-                    GSTIN :{" "}
-                    <span className="text-[#176746]">{COMPANY_GSTIN}</span>
-                  </p>
-
-                  {/* CIN */}
-
-                  <p className="mt-0.5 text-[9px] font-bold tracking-wide text-[#536c61]">
-                    CIN : <span className="text-[#176746]">{COMPANY_CIN}</span>
-                  </p>
+                    <p>
+                      CIN :{" "}
+                      <span className="text-[#176746]">{COMPANY_CIN}</span>
+                    </p>
+                  </div>
 
                   <p className="mt-2 text-[10px] text-[#7c8d86]">
                     Customer plan invoice &amp; benefit summary
@@ -474,7 +632,7 @@ Payment Status: ${paymentStatus}`;
 
               {/* INVOICE META */}
 
-              <div className="min-w-[145px] pt-1 text-right">
+              <div className="w-[145px] shrink-0 pt-1 text-right">
                 <p className="text-[9px] font-bold uppercase tracking-wide text-[#8a9a93]">
                   Invoice No.
                 </p>
@@ -516,7 +674,7 @@ Payment Status: ${paymentStatus}`;
                     {planName}
                   </h2>
 
-                  <p className="mt-1 text-[11px] leading-relaxed text-[#59726a]">
+                  <p className="mt-1 break-words text-[11px] leading-relaxed text-[#59726a]">
                     {planDescription}
                   </p>
 
@@ -526,7 +684,7 @@ Payment Status: ${paymentStatus}`;
                   </span>
                 </div>
 
-                <div className="text-right">
+                <div className="shrink-0 text-right">
                   <div className="text-[22px] font-extrabold text-[#075e3d]">
                     INR {formatINR(basePrice)}
                   </div>
@@ -540,12 +698,8 @@ Payment Status: ${paymentStatus}`;
 
             {/* PLAN FACTS */}
 
-            <div className="mt-6 grid grid-cols-4 border border-[#d8e5db]">
+            <div className="mt-6 grid grid-cols-2 border border-[#d8e5db]">
               <InfoCell label="Family" value={family} />
-
-              <InfoCell label="Minimum Age" value="18 Years" />
-
-              <InfoCell label="Maximum Age" value="60 Years" />
 
               <InfoCell label="Validity" value={validity} />
             </div>
@@ -660,7 +814,7 @@ Payment Status: ${paymentStatus}`;
               </div>
             </div>
 
-            {/* FOOTER */}
+            {/* PAGE 1 FOOTER */}
 
             <div className="absolute bottom-7 left-7 right-7 flex items-center justify-between border-t border-[#e3e9e5] pt-3 text-[8px] text-[#778780] sm:left-10 sm:right-10">
               <span>Continued on page 2</span>
@@ -673,7 +827,10 @@ Payment Status: ${paymentStatus}`;
               PAGE 2
           ================================================= */}
 
-          <section className="relative min-h-[1123px] border-t border-[#e1e8e3] bg-white p-7 sm:p-10">
+          <section
+            id="invoice-page-2"
+            className="relative box-border h-[1123px] w-full overflow-visible border-t border-[#e1e8e3] bg-white p-7 sm:p-10"
+          >
             {/* PAGE HEADER */}
 
             <div className="flex items-center justify-between border-b border-[#dce7df] pb-4">
@@ -763,7 +920,7 @@ Payment Status: ${paymentStatus}`;
                       Customer Name
                     </span>
 
-                    <strong className="text-right text-[10px] text-[#264338]">
+                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
                       {invoiceData.customerName || "-"}
                     </strong>
                   </div>
@@ -773,7 +930,7 @@ Payment Status: ${paymentStatus}`;
                       Mobile Number
                     </span>
 
-                    <strong className="text-right text-[10px] text-[#264338]">
+                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
                       {invoiceData.phoneNumber || "-"}
                     </strong>
                   </div>
@@ -781,7 +938,7 @@ Payment Status: ${paymentStatus}`;
                   <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
                     <span className="text-[10px] text-[#81908a]">City</span>
 
-                    <strong className="text-right text-[10px] text-[#264338]">
+                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
                       {invoiceData.city || "-"}
                     </strong>
                   </div>
@@ -789,7 +946,7 @@ Payment Status: ${paymentStatus}`;
                   <div className="grid grid-cols-[1fr_auto] px-5 py-2.5">
                     <span className="text-[10px] text-[#81908a]">State</span>
 
-                    <strong className="text-right text-[10px] text-[#264338]">
+                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
                       {invoiceData.state || "-"}
                     </strong>
                   </div>
@@ -803,7 +960,7 @@ Payment Status: ${paymentStatus}`;
                       Product / Plan
                     </span>
 
-                    <strong className="text-right text-[10px] text-[#264338]">
+                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
                       {planName}
                     </strong>
                   </div>
@@ -839,7 +996,7 @@ Payment Status: ${paymentStatus}`;
                       Invoice No.
                     </span>
 
-                    <strong className="break-all text-right text-[10px] text-[#264338]">
+                    <strong className="max-w-[150px] break-all text-right text-[10px] text-[#264338]">
                       {invoiceData.invoiceNumber || "-"}
                     </strong>
                   </div>
@@ -857,7 +1014,7 @@ Payment Status: ${paymentStatus}`;
               </div>
             </div>
 
-            {/* PAYMENT AREA */}
+            {/* PAYMENT */}
 
             <div className="mt-7 grid grid-cols-2 gap-8">
               {/* MEMBERSHIP */}

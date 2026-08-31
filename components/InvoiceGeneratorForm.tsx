@@ -15,6 +15,7 @@ import {
   CreditCard,
   BadgeIndianRupee,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 
 import type { InvoiceData } from "@/types";
 
@@ -112,14 +113,14 @@ const PAYMENT_STATUS_OPTIONS = [
   "CUSTOM",
 ];
 
+/* =========================================================
+   HELPERS
+========================================================= */
+
 const formatINR = (value: number) =>
   value.toLocaleString("en-IN", {
     maximumFractionDigits: 0,
   });
-
-/* =========================================================
-   GET FAMILY DESCRIPTION
-========================================================= */
 
 const getFamilyDescription = (family: string) => {
   return (
@@ -141,6 +142,24 @@ export function InvoiceGeneratorForm({
   onReset,
 }: InvoiceGeneratorFormProps) {
   /* =======================================================
+     BASE PRICE INPUT
+  ======================================================== */
+
+  const [basePriceInput, setBasePriceInput] = useState(
+    invoiceData.basePrice > 0 ? String(invoiceData.basePrice) : "",
+  );
+
+  /* =======================================================
+     KEEP LOCAL PRICE INPUT IN SYNC
+  ======================================================== */
+
+  useEffect(() => {
+    setBasePriceInput(
+      invoiceData.basePrice > 0 ? String(invoiceData.basePrice) : "",
+    );
+  }, [invoiceData.basePrice]);
+
+  /* =======================================================
      PRICING
   ======================================================== */
 
@@ -151,7 +170,7 @@ export function InvoiceGeneratorForm({
   const totalAmount = basePrice + gstAmount;
 
   /* =======================================================
-     CUSTOM PLAN CHECK
+     CUSTOM PLAN
   ======================================================== */
 
   const isCustomPlan = invoiceData.planName === "Custom Plan";
@@ -187,11 +206,13 @@ export function InvoiceGeneratorForm({
   };
 
   /* =======================================================
-     SELECT PREDEFINED PLAN
+     PREDEFINED PLAN SELECT
   ======================================================== */
 
   const handleSelectPlan = (plan: (typeof PLAN_OPTIONS)[number]) => {
     const description = getFamilyDescription(plan.family);
+
+    setBasePriceInput(String(plan.price));
 
     onChange({
       ...invoiceData,
@@ -211,11 +232,13 @@ export function InvoiceGeneratorForm({
   };
 
   /* =======================================================
-     SELECT CUSTOM PLAN
+     CUSTOM PLAN SELECT
   ======================================================== */
 
   const handleCustomPlan = () => {
     const defaultFamily = "2A";
+
+    setBasePriceInput("");
 
     onChange({
       ...invoiceData,
@@ -237,8 +260,7 @@ export function InvoiceGeneratorForm({
   /* =======================================================
      FAMILY CHANGE
      
-     Description automatically changes according to family.
-     User cannot manually edit description.
+     Family controls description automatically.
   ======================================================== */
 
   const handleFamilyChange = (family: string) => {
@@ -265,6 +287,32 @@ export function InvoiceGeneratorForm({
 
       customPaymentStatus:
         value === "CUSTOM" ? invoiceData.customPaymentStatus : "",
+    });
+  };
+
+  /* =======================================================
+     BASE PRICE CHANGE
+     
+     IMPORTANT:
+     - Empty string is allowed in UI.
+     - Only digits are accepted.
+     - No min / max / step.
+     - No decimal.
+     - No negative.
+     - No letters.
+  ======================================================== */
+
+  const handleBasePriceChange = (value: string) => {
+    const numericValue = value.replace(/\D/g, "");
+
+    setBasePriceInput(numericValue);
+
+    onChange({
+      ...invoiceData,
+
+      basePrice: numericValue === "" ? 0 : Number(numericValue),
+
+      gstRate: GST_RATE,
     });
   };
 
@@ -735,7 +783,7 @@ export function InvoiceGeneratorForm({
                     }`}
                   >
                     <div className="flex items-center gap-3 p-3.5 sm:p-4">
-                      {/* Icon */}
+                      {/* ICON */}
 
                       <div
                         className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
@@ -753,7 +801,7 @@ export function InvoiceGeneratorForm({
                         )}
                       </div>
 
-                      {/* Information */}
+                      {/* INFORMATION */}
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
@@ -784,7 +832,7 @@ export function InvoiceGeneratorForm({
                         </span>
                       </div>
 
-                      {/* Price */}
+                      {/* PRICE */}
 
                       <div className="shrink-0 text-right">
                         <p
@@ -804,7 +852,7 @@ export function InvoiceGeneratorForm({
                         </p>
                       </div>
 
-                      {/* Arrow */}
+                      {/* ARROW */}
 
                       <div
                         className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-full sm:flex ${
@@ -903,7 +951,7 @@ export function InvoiceGeneratorForm({
 
             <div className="space-y-4 px-5 py-5 sm:px-6">
               {/* =================================================
-                  FAMILY DROPDOWN
+                  FAMILY
               ================================================== */}
 
               <div>
@@ -937,7 +985,7 @@ export function InvoiceGeneratorForm({
               </div>
 
               {/* =================================================
-                  PLAN DESCRIPTION - READ ONLY
+                  PLAN DESCRIPTION
               ================================================== */}
 
               <div>
@@ -960,8 +1008,8 @@ export function InvoiceGeneratorForm({
                 />
 
                 <p className="mt-1.5 text-[9px] text-[#819189]">
-                  Automatically assigned based on the selected family. This
-                  field cannot be changed.
+                  Automatically assigned based on family. This field cannot be
+                  changed.
                 </p>
               </div>
 
@@ -993,7 +1041,9 @@ export function InvoiceGeneratorForm({
                   />
                 </div>
 
-                {/* BASE PRICE */}
+                {/* =================================================
+                    BASE PRICE - FIXED BEHAVIOR
+                ================================================== */}
 
                 <div>
                   <label
@@ -1004,29 +1054,53 @@ export function InvoiceGeneratorForm({
                   </label>
 
                   <div className="relative">
-                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-[#667c73]">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-[#667c73]">
                       ₹
                     </span>
 
                     <input
                       id="base-price-input"
-                      type="number"
-                      min="0"
-                      step="100"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
                       required
-                      value={invoiceData.basePrice}
+                      value={basePriceInput}
                       onChange={(event) =>
-                        handleInputChange(
-                          "basePrice",
-                          Math.max(0, Number(event.target.value) || 0),
-                        )
+                        handleBasePriceChange(event.target.value)
                       }
+                      onKeyDown={(event) => {
+                        const allowedKeys = [
+                          "Backspace",
+                          "Delete",
+                          "Tab",
+                          "ArrowLeft",
+                          "ArrowRight",
+                          "Home",
+                          "End",
+                        ];
+
+                        if (allowedKeys.includes(event.key)) {
+                          return;
+                        }
+
+                        if (!/^\d$/.test(event.key)) {
+                          event.preventDefault();
+                        }
+                      }}
+                      onPaste={(event) => {
+                        event.preventDefault();
+
+                        const pastedText = event.clipboardData.getData("text");
+
+                        handleBasePriceChange(pastedText);
+                      }}
+                      placeholder="Enter amount"
                       className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                     />
                   </div>
 
                   <p className="mt-1.5 text-[9px] text-[#819189]">
-                    Admin can modify the premium before generating.
+                    Numbers only. Enter the premium amount manually.
                   </p>
                 </div>
               </div>
