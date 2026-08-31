@@ -1,0 +1,1249 @@
+"use client";
+
+import Image from "next/image";
+import { motion } from "motion/react";
+import {
+  User,
+  Phone,
+  MapPin,
+  ShieldCheck,
+  Hospital,
+  ChevronRight,
+  RotateCcw,
+  FileText,
+  CalendarDays,
+  CreditCard,
+  BadgeIndianRupee,
+} from "lucide-react";
+
+import type { InvoiceData } from "@/types";
+
+const GST_RATE = 5;
+
+const COMPANY_GSTIN = "09AAQCR1885F1ZU";
+const COMPANY_CIN = "U86909UW2026OPC257013";
+
+const COMPANY_NAME = "Restore Health Services";
+
+const COMPANY_ADDRESS =
+  "A-1, Ground Floor, Sector 59, Noida, Gautam Buddha Nagar, UttarPradesh, 201301";
+
+/* =========================================================
+   FAMILY DESCRIPTIONS
+========================================================= */
+
+const FAMILY_OPTIONS = [
+  {
+    value: "1A",
+    description: "Annual health plan membership for individual coverage.",
+  },
+  {
+    value: "2A",
+    description: "Annual family health plan membership for 2 adults.",
+  },
+  {
+    value: "2A + 2C",
+    description:
+      "Annual family health plan membership for 2 adults and 2 children.",
+  },
+] as const;
+
+/* =========================================================
+   PREDEFINED PLANS
+========================================================= */
+
+const PLAN_OPTIONS = [
+  {
+    id: "individual-10000",
+    name: "Individual",
+    coverage: "Family Coverage: 1A",
+    price: 10000,
+    planName: "Individual",
+    family: "1A",
+  },
+
+  {
+    id: "floater-20000",
+    name: "Floater",
+    coverage: "Family Coverage: 2A",
+    price: 20000,
+    planName: "Floater",
+    family: "2A",
+  },
+
+  {
+    id: "floater-30000",
+    name: "Floater",
+    coverage: "Family Coverage: 2A",
+    price: 30000,
+    planName: "Floater",
+    family: "2A",
+  },
+
+  {
+    id: "floater-50000",
+    name: "Floater",
+    coverage: "Family Coverage: 2A + 2C",
+    price: 50000,
+    planName: "Floater",
+    family: "2A + 2C",
+  },
+
+  {
+    id: "exec-100000",
+    name: "Exec Floater",
+    coverage: "Family Coverage: 2A + 2C",
+    price: 100000,
+    planName: "Exec Floater",
+    family: "2A + 2C",
+    featured: true,
+  },
+];
+
+/* =========================================================
+   PAYMENT STATUS
+========================================================= */
+
+const PAYMENT_STATUS_OPTIONS = [
+  "PAID IN FULL",
+  "PENDING",
+  "PARTIALLY PAID",
+  "OVERDUE",
+  "CUSTOM",
+];
+
+const formatINR = (value: number) =>
+  value.toLocaleString("en-IN", {
+    maximumFractionDigits: 0,
+  });
+
+/* =========================================================
+   GET FAMILY DESCRIPTION
+========================================================= */
+
+const getFamilyDescription = (family: string) => {
+  return (
+    FAMILY_OPTIONS.find((item) => item.value === family)?.description || ""
+  );
+};
+
+interface InvoiceGeneratorFormProps {
+  invoiceData: InvoiceData;
+  onChange: (updated: InvoiceData) => void;
+  onGenerate: () => void;
+  onReset: () => void;
+}
+
+export function InvoiceGeneratorForm({
+  invoiceData,
+  onChange,
+  onGenerate,
+  onReset,
+}: InvoiceGeneratorFormProps) {
+  /* =======================================================
+     PRICING
+  ======================================================== */
+
+  const basePrice = Number(invoiceData.basePrice) || 0;
+
+  const gstAmount = (basePrice * GST_RATE) / 100;
+
+  const totalAmount = basePrice + gstAmount;
+
+  /* =======================================================
+     CUSTOM PLAN CHECK
+  ======================================================== */
+
+  const isCustomPlan = invoiceData.planName === "Custom Plan";
+
+  /* =======================================================
+     SELECTED PREDEFINED PLAN
+  ======================================================== */
+
+  const selectedPlan =
+    PLAN_OPTIONS.find(
+      (plan) =>
+        plan.price === basePrice &&
+        plan.planName === invoiceData.planName &&
+        plan.family === invoiceData.family,
+    ) ||
+    PLAN_OPTIONS.find(
+      (plan) =>
+        plan.price === basePrice && plan.planName === invoiceData.planName,
+    );
+
+  /* =======================================================
+     GENERAL INPUT UPDATE
+  ======================================================== */
+
+  const handleInputChange = (
+    field: keyof InvoiceData,
+    value: string | number,
+  ) => {
+    onChange({
+      ...invoiceData,
+      [field]: value,
+    });
+  };
+
+  /* =======================================================
+     SELECT PREDEFINED PLAN
+  ======================================================== */
+
+  const handleSelectPlan = (plan: (typeof PLAN_OPTIONS)[number]) => {
+    const description = getFamilyDescription(plan.family);
+
+    onChange({
+      ...invoiceData,
+
+      planName: plan.planName,
+
+      family: plan.family,
+
+      planDescription: description,
+
+      basePrice: plan.price,
+
+      gstRate: GST_RATE,
+
+      tenure: "1 Year",
+    });
+  };
+
+  /* =======================================================
+     SELECT CUSTOM PLAN
+  ======================================================== */
+
+  const handleCustomPlan = () => {
+    const defaultFamily = "2A";
+
+    onChange({
+      ...invoiceData,
+
+      planName: "Custom Plan",
+
+      family: defaultFamily,
+
+      planDescription: getFamilyDescription(defaultFamily),
+
+      basePrice: 0,
+
+      gstRate: GST_RATE,
+
+      tenure: "1 Year",
+    });
+  };
+
+  /* =======================================================
+     FAMILY CHANGE
+     
+     Description automatically changes according to family.
+     User cannot manually edit description.
+  ======================================================== */
+
+  const handleFamilyChange = (family: string) => {
+    const description = getFamilyDescription(family);
+
+    onChange({
+      ...invoiceData,
+
+      family,
+
+      planDescription: description,
+    });
+  };
+
+  /* =======================================================
+     PAYMENT STATUS
+  ======================================================== */
+
+  const handlePaymentStatusChange = (value: string) => {
+    onChange({
+      ...invoiceData,
+
+      paymentStatus: value,
+
+      customPaymentStatus:
+        value === "CUSTOM" ? invoiceData.customPaymentStatus : "",
+    });
+  };
+
+  /* =======================================================
+     GENERATE
+  ======================================================== */
+
+  const handleGenerate = () => {
+    onGenerate();
+  };
+
+  return (
+    <motion.div
+      initial={{
+        opacity: 0,
+        y: 12,
+      }}
+      animate={{
+        opacity: 1,
+        y: 0,
+      }}
+      transition={{
+        duration: 0.25,
+      }}
+      className="min-h-screen bg-[#f4f7f4] pb-16 text-[#18352c]"
+    >
+      {/* =====================================================
+          TOP NAVIGATION
+      ====================================================== */}
+
+      <header className="sticky top-0 z-50 border-b border-[#d9e4dc] bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-16 max-w-[920px] items-center justify-between px-4">
+          <div className="flex items-center gap-3">
+            <Image
+              src="/logo.png"
+              alt={COMPANY_NAME}
+              width={145}
+              height={48}
+              priority
+              className="h-9 w-auto object-contain"
+            />
+
+            <div className="hidden h-6 w-px bg-[#d8e3dc] sm:block" />
+
+            <div className="hidden sm:block">
+              <p className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#7e9087]">
+                HEALTH PLAN
+              </p>
+
+              <p className="text-sm font-bold text-[#174a37]">
+                Invoice Generator
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onReset}
+            className="flex items-center gap-1.5 rounded-full border border-[#ceddd4] bg-white px-3.5 py-2 text-xs font-bold text-[#196044] transition hover:bg-[#eef7f0]"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+            Reset
+          </button>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-[920px] px-4 pt-7">
+        {/* =====================================================
+            PAGE TITLE
+        ====================================================== */}
+
+        <div className="mb-6">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <div className="mb-1 flex items-center gap-2">
+                <span className="h-2 w-2 rounded-full bg-[#176746]" />
+
+                <span className="text-[10px] font-bold uppercase tracking-[0.13em] text-[#7c9086]">
+                  {COMPANY_NAME}
+                </span>
+              </div>
+
+              <h1 className="text-2xl font-extrabold tracking-tight text-[#17362c] sm:text-3xl">
+                Create Health Plan Invoice
+              </h1>
+
+              <p className="mt-1 text-sm text-[#6b7d75]">
+                Enter invoice, customer and membership details.
+              </p>
+            </div>
+
+            <div className="hidden items-center gap-2 rounded-full border border-[#d5e3da] bg-white px-3 py-1.5 sm:flex">
+              <ShieldCheck className="h-4 w-4 text-[#176746]" />
+
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#45665a]">
+                GST 5%
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleGenerate();
+          }}
+          className="space-y-5"
+        >
+          {/* =====================================================
+              COMPANY INFORMATION
+          ====================================================== */}
+
+          <section className="overflow-hidden rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
+            <div className="border-b border-[#e3ebe6] bg-[#f8fbf8] px-5 py-4 sm:px-6">
+              <h2 className="text-base font-bold text-[#18352c]">
+                Company Information
+              </h2>
+            </div>
+
+            <div className="px-5 py-5 sm:px-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+                <Image
+                  src="/logo.png"
+                  alt={COMPANY_NAME}
+                  width={110}
+                  height={70}
+                  priority
+                  className="h-[65px] w-auto object-contain"
+                />
+
+                <div className="flex-1">
+                  <h3 className="text-lg font-extrabold text-[#17362c]">
+                    {COMPANY_NAME}
+                  </h3>
+
+                  <p className="mt-1 max-w-2xl text-xs leading-relaxed text-[#64766e]">
+                    {COMPANY_ADDRESS}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <span className="rounded-md bg-[#edf7ea] px-2.5 py-1 text-[9px] font-bold text-[#176746]">
+                      GSTIN : {COMPANY_GSTIN}
+                    </span>
+
+                    <span className="rounded-md bg-[#edf7ea] px-2.5 py-1 text-[9px] font-bold text-[#176746]">
+                      CIN : {COMPANY_CIN}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* =====================================================
+              INVOICE DETAILS
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
+            <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf6ea] text-[#176746]">
+                  <FileText className="h-4 w-4" />
+                </div>
+
+                <div>
+                  <h2 className="text-base font-bold text-[#18352c]">
+                    Invoice Details
+                  </h2>
+
+                  <p className="text-[10px] text-[#819189]">
+                    Invoice number, issue date and payment status.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
+              {/* Invoice Number */}
+
+              <div>
+                <label
+                  htmlFor="invoice-number-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Invoice Number
+                </label>
+
+                <div className="relative">
+                  <FileText className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                  <input
+                    id="invoice-number-input"
+                    required
+                    type="text"
+                    value={invoiceData.invoiceNumber}
+                    onChange={(event) =>
+                      handleInputChange("invoiceNumber", event.target.value)
+                    }
+                    placeholder="RHS-260831-S"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  />
+                </div>
+              </div>
+
+              {/* Invoice Date */}
+
+              <div>
+                <label
+                  htmlFor="issue-date-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Invoice Date
+                </label>
+
+                <div className="relative">
+                  <CalendarDays className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                  <input
+                    id="issue-date-input"
+                    required
+                    type="date"
+                    value={invoiceData.issueDate}
+                    onChange={(event) =>
+                      handleInputChange("issueDate", event.target.value)
+                    }
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  />
+                </div>
+              </div>
+
+              {/* Payment Status */}
+
+              <div>
+                <label
+                  htmlFor="payment-status-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Payment Status
+                </label>
+
+                <div className="relative">
+                  <CreditCard className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                  <select
+                    id="payment-status-input"
+                    value={invoiceData.paymentStatus}
+                    onChange={(event) =>
+                      handlePaymentStatusChange(event.target.value)
+                    }
+                    className="w-full appearance-none rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  >
+                    {PAYMENT_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Custom Payment Status */}
+
+              {invoiceData.paymentStatus === "CUSTOM" && (
+                <div>
+                  <label
+                    htmlFor="custom-payment-status-input"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                  >
+                    Custom Payment Status
+                  </label>
+
+                  <input
+                    id="custom-payment-status-input"
+                    required
+                    type="text"
+                    value={invoiceData.customPaymentStatus}
+                    onChange={(event) =>
+                      handleInputChange(
+                        "customPaymentStatus",
+                        event.target.value,
+                      )
+                    }
+                    placeholder="e.g. PAYMENT RECEIVED"
+                    className="w-full rounded-xl border border-[#d9bf80] bg-[#fffaf0] px-4 py-3 text-sm font-semibold text-[#624c19] outline-none transition focus:border-[#bf911d] focus:ring-2 focus:ring-[#bf911d]/10"
+                  />
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* =====================================================
+              CUSTOMER DETAILS
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
+            <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf6ea] text-[#176746]">
+                  <User className="h-4 w-4" />
+                </div>
+
+                <div>
+                  <h2 className="text-base font-bold text-[#18352c]">
+                    Customer Details
+                  </h2>
+
+                  <p className="text-[10px] text-[#819189]">
+                    Enter customer information for the invoice.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-5 py-5 sm:px-6">
+              {/* Customer Name */}
+
+              <div>
+                <label
+                  htmlFor="customer-name-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Customer Name
+                </label>
+
+                <input
+                  id="customer-name-input"
+                  required
+                  type="text"
+                  value={invoiceData.customerName}
+                  onChange={(event) =>
+                    handleInputChange("customerName", event.target.value)
+                  }
+                  placeholder="Enter customer name"
+                  className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                />
+              </div>
+
+              {/* Mobile / City */}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label
+                    htmlFor="phone-input"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                  >
+                    Mobile Number
+                  </label>
+
+                  <div className="relative">
+                    <Phone className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                    <input
+                      id="phone-input"
+                      required
+                      type="tel"
+                      value={invoiceData.phoneNumber}
+                      onChange={(event) =>
+                        handleInputChange("phoneNumber", event.target.value)
+                      }
+                      placeholder="9876543210"
+                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="city-input"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                  >
+                    City
+                  </label>
+
+                  <div className="relative">
+                    <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                    <input
+                      id="city-input"
+                      required
+                      type="text"
+                      value={invoiceData.city}
+                      onChange={(event) =>
+                        handleInputChange("city", event.target.value)
+                      }
+                      placeholder="Enter city"
+                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* State */}
+
+              <div>
+                <label
+                  htmlFor="state-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  State
+                </label>
+
+                <input
+                  id="state-input"
+                  type="text"
+                  value={invoiceData.state}
+                  onChange={(event) =>
+                    handleInputChange("state", event.target.value)
+                  }
+                  placeholder="Enter state"
+                  className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* =====================================================
+              PLAN SELECTION
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
+            <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf6ea] text-[#176746]">
+                    <FileText className="h-4 w-4" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-bold text-[#18352c]">
+                      Select Plan
+                    </h2>
+
+                    <p className="text-[10px] text-[#819189]">
+                      Choose a predefined plan or create a custom one.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="rounded-full bg-[#eef7ef] px-3 py-1.5 text-[9px] font-extrabold uppercase tracking-wider text-[#176746]">
+                  5% GST
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2.5 px-5 py-5 sm:px-6">
+              {/* PREDEFINED PLANS */}
+
+              {PLAN_OPTIONS.map((plan) => {
+                const isSelected = selectedPlan?.id === plan.id;
+
+                const gst = (plan.price * GST_RATE) / 100;
+
+                const total = plan.price + gst;
+
+                return (
+                  <button
+                    key={plan.id}
+                    type="button"
+                    onClick={() => handleSelectPlan(plan)}
+                    className={`group w-full rounded-xl border text-left transition-all ${
+                      plan.featured
+                        ? isSelected
+                          ? "border-[#d99221] bg-[#fff9ef] shadow-sm ring-1 ring-[#d99221]/20"
+                          : "border-[#ecd6ad] bg-[#fffdf8] hover:border-[#d99221]"
+                        : isSelected
+                          ? "border-[#5c9574] bg-[#f3faf4] shadow-sm ring-1 ring-[#5c9574]/15"
+                          : "border-[#dae4df] bg-white hover:border-[#9db9aa] hover:bg-[#fbfdfb]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 p-3.5 sm:p-4">
+                      {/* Icon */}
+
+                      <div
+                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${
+                          plan.featured
+                            ? "bg-[#fff0d2] text-[#d98200]"
+                            : "bg-[#edf7ea] text-[#176746]"
+                        }`}
+                      >
+                        {plan.featured ? (
+                          <ShieldCheck className="h-5 w-5" />
+                        ) : plan.family === "1A" ? (
+                          <User className="h-5 w-5" />
+                        ) : (
+                          <Hospital className="h-5 w-5" />
+                        )}
+                      </div>
+
+                      {/* Information */}
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-sm font-extrabold text-[#17362c] sm:text-base">
+                            {plan.name}
+                          </h3>
+
+                          {plan.featured && (
+                            <span className="rounded-full bg-[#d98200] px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-white">
+                              Executive
+                            </span>
+                          )}
+
+                          {isSelected && (
+                            <span className="rounded-full bg-[#dff0e4] px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-[#176746]">
+                              Selected
+                            </span>
+                          )}
+                        </div>
+
+                        <p className="mt-0.5 text-xs font-medium text-[#587067]">
+                          {plan.coverage}
+                        </p>
+
+                        <span className="mt-1.5 inline-block rounded border border-[#e7ca82] bg-[#fff9eb] px-2 py-0.5 text-[8px] font-medium leading-relaxed text-[#8b6510]">
+                          Once the plan is issued, it can not be cancelled or
+                          refunded.
+                        </span>
+                      </div>
+
+                      {/* Price */}
+
+                      <div className="shrink-0 text-right">
+                        <p
+                          className={`text-base font-extrabold sm:text-xl ${
+                            plan.featured ? "text-[#cf7900]" : "text-[#075e3d]"
+                          }`}
+                        >
+                          ₹{formatINR(plan.price)}
+                        </p>
+
+                        <p className="text-[8px] font-semibold text-[#7c8d86]">
+                          + GST (5%)
+                        </p>
+
+                        <p className="mt-0.5 text-[8px] font-bold text-[#597269]">
+                          ₹{formatINR(total)} total
+                        </p>
+                      </div>
+
+                      {/* Arrow */}
+
+                      <div
+                        className={`hidden h-8 w-8 shrink-0 items-center justify-center rounded-full sm:flex ${
+                          isSelected
+                            ? plan.featured
+                              ? "bg-[#d98200] text-white"
+                              : "bg-[#176746] text-white"
+                            : "bg-[#eff5f1] text-[#376151]"
+                        }`}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+
+              {/* =================================================
+                  CUSTOM PLAN
+              ================================================== */}
+
+              <button
+                type="button"
+                onClick={handleCustomPlan}
+                className={`group w-full rounded-xl border text-left transition-all ${
+                  isCustomPlan
+                    ? "border-[#176746] bg-[#f2faf4] shadow-sm ring-1 ring-[#176746]/15"
+                    : "border-dashed border-[#99b6a7] bg-[#fbfdfb] hover:border-[#176746] hover:bg-[#f6fbf7]"
+                }`}
+              >
+                <div className="flex items-center gap-3 p-3.5 sm:p-4">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#edf7ea] text-[#176746]">
+                    <BadgeIndianRupee className="h-5 w-5" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-sm font-extrabold text-[#17362c] sm:text-base">
+                        Custom Plan
+                      </h3>
+
+                      {isCustomPlan && (
+                        <span className="rounded-full bg-[#dff0e4] px-2 py-0.5 text-[8px] font-extrabold uppercase tracking-wide text-[#176746]">
+                          Selected
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="mt-0.5 text-xs font-medium text-[#587067]">
+                      Choose family, enter validity and set your own price.
+                    </p>
+
+                    <span className="mt-1.5 inline-block rounded border border-[#cbded2] bg-white px-2 py-0.5 text-[8px] font-medium text-[#5a7469]">
+                      Description is automatically generated from family
+                    </span>
+                  </div>
+
+                  <div className="hidden h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#eff5f1] text-[#376151] sm:flex">
+                    <ChevronRight className="h-4 w-4" />
+                  </div>
+                </div>
+              </button>
+            </div>
+
+            <div className="border-t border-[#e4ece7] px-5 py-3 sm:px-6">
+              <p className="text-center text-[9px] leading-relaxed text-[#70837a]">
+                ✓ Family options: 1A, 2A and 2A + 2C. Plan description is
+                automatically assigned according to family and cannot be
+                manually changed.
+              </p>
+            </div>
+          </section>
+
+          {/* =====================================================
+              PLAN DETAILS
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
+            <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-base font-bold text-[#18352c]">
+                    Plan Details
+                  </h2>
+
+                  <p className="mt-0.5 text-[10px] text-[#819189]">
+                    Family controls the description automatically.
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-[#edf7ea] px-3 py-1 text-[9px] font-bold uppercase tracking-wider text-[#176746]">
+                  GST 5%
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-4 px-5 py-5 sm:px-6">
+              {/* =================================================
+                  FAMILY DROPDOWN
+              ================================================== */}
+
+              <div>
+                <label
+                  htmlFor="family-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Family
+                </label>
+
+                <select
+                  id="family-input"
+                  required
+                  value={invoiceData.family}
+                  onChange={(event) => handleFamilyChange(event.target.value)}
+                  className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                >
+                  <option value="">Select Family</option>
+
+                  <option value="1A">1A</option>
+
+                  <option value="2A">2A</option>
+
+                  <option value="2A + 2C">2A + 2C</option>
+                </select>
+
+                <p className="mt-1.5 text-[9px] text-[#819189]">
+                  Select family and the plan description will update
+                  automatically.
+                </p>
+              </div>
+
+              {/* =================================================
+                  PLAN DESCRIPTION - READ ONLY
+              ================================================== */}
+
+              <div>
+                <label
+                  htmlFor="plan-description-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Plan Description
+                </label>
+
+                <textarea
+                  id="plan-description-input"
+                  rows={3}
+                  value={
+                    invoiceData.planDescription ||
+                    getFamilyDescription(invoiceData.family)
+                  }
+                  readOnly
+                  className="w-full resize-none cursor-not-allowed rounded-xl border border-[#d8e4dc] bg-[#f3f8f4] px-4 py-3 text-sm font-medium leading-relaxed text-[#315447] outline-none"
+                />
+
+                <p className="mt-1.5 text-[9px] text-[#819189]">
+                  Automatically assigned based on the selected family. This
+                  field cannot be changed.
+                </p>
+              </div>
+
+              {/* =================================================
+                  VALIDITY / BASE PRICE
+              ================================================== */}
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* VALIDITY */}
+
+                <div>
+                  <label
+                    htmlFor="tenure-input"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                  >
+                    Validity
+                  </label>
+
+                  <input
+                    id="tenure-input"
+                    required
+                    type="text"
+                    value={invoiceData.tenure}
+                    onChange={(event) =>
+                      handleInputChange("tenure", event.target.value)
+                    }
+                    placeholder="1 Year"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  />
+                </div>
+
+                {/* BASE PRICE */}
+
+                <div>
+                  <label
+                    htmlFor="base-price-input"
+                    className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                  >
+                    Base Price
+                  </label>
+
+                  <div className="relative">
+                    <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-[#667c73]">
+                      ₹
+                    </span>
+
+                    <input
+                      id="base-price-input"
+                      type="number"
+                      min="0"
+                      step="100"
+                      required
+                      value={invoiceData.basePrice}
+                      onChange={(event) =>
+                        handleInputChange(
+                          "basePrice",
+                          Math.max(0, Number(event.target.value) || 0),
+                        )
+                      }
+                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    />
+                  </div>
+
+                  <p className="mt-1.5 text-[9px] text-[#819189]">
+                    Admin can modify the premium before generating.
+                  </p>
+                </div>
+              </div>
+
+              {/* =================================================
+                  GST
+              ================================================== */}
+
+              <div className="flex items-center justify-between rounded-xl border border-[#d4e5d9] bg-[#f4faf4] px-4 py-3">
+                <div>
+                  <p className="text-sm font-bold text-[#24493b]">GST Rate</p>
+
+                  <p className="text-[9px] text-[#75887f]">
+                    Fixed GST applied to every invoice.
+                  </p>
+                </div>
+
+                <span className="rounded-full bg-[#075e3d] px-3 py-1 text-sm font-extrabold text-white">
+                  5%
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* =====================================================
+              PAYMENT SUMMARY
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
+            <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
+              <h2 className="text-base font-bold text-[#18352c]">
+                Payment Summary
+              </h2>
+            </div>
+
+            <div className="p-5 sm:p-6">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-[#e3ebe6] pb-3">
+                  <span className="text-sm text-[#61756c]">Base Price</span>
+
+                  <span className="text-base font-semibold text-[#18352c]">
+                    ₹{formatINR(basePrice)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between border-b border-[#e3ebe6] pb-3">
+                  <span className="text-sm text-[#61756c]">GST (5%)</span>
+
+                  <span className="text-base font-semibold text-[#176746]">
+                    ₹{formatINR(gstAmount)}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <div>
+                    <p className="text-sm font-extrabold uppercase text-[#176746]">
+                      Total Payable
+                    </p>
+
+                    <p className="mt-0.5 text-[9px] text-[#7b8d85]">
+                      Inclusive of 5% GST
+                    </p>
+                  </div>
+
+                  <p className="text-2xl font-extrabold text-[#075e3d]">
+                    ₹{formatINR(totalAmount)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* =====================================================
+              INCLUDED BENEFITS
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
+            <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
+              <h2 className="text-base font-bold text-[#18352c]">
+                Included Benefits
+              </h2>
+
+              <p className="mt-0.5 text-[10px] text-[#819189]">
+                Benefits included with the membership plan.
+              </p>
+            </div>
+
+            <div className="space-y-3 p-5 sm:p-6">
+              {/* HOSPICASH */}
+
+              <div className="overflow-hidden rounded-xl border border-[#d6e2d9]">
+                <div className="flex items-center gap-3 bg-[#075e3d] px-4 py-3">
+                  <Hospital className="h-4 w-4 text-white" />
+
+                  <div>
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-[#b9e6c9]">
+                      Including Protection Benefit
+                    </p>
+
+                    <p className="text-sm font-bold text-white">
+                      Hospicash Benefit
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2 bg-[#f7fbf7] p-4 text-[10px] leading-relaxed text-[#42544d]">
+                  <p>
+                    Covered Amount - <strong>INR 1000 per day</strong>{" "}
+                    hospitalization with maximum limit upto{" "}
+                    <strong>30 days in a year</strong> with 1 day deductible per
+                    claim.
+                  </p>
+
+                  <p>
+                    Payout will be{" "}
+                    <strong className="text-[#176746]">
+                      double in case of ICU hospitalization
+                    </strong>{" "}
+                    with maximum limit upto <strong>15 days in a year</strong>{" "}
+                    with 1 day deductible per claim.
+                  </p>
+
+                  <p>
+                    Customers can avail this benefit only for{" "}
+                    <strong>30 days in a policy year</strong> collectively for
+                    normal hospitalization and{" "}
+                    <strong>15 days in a policy year</strong> collectively for
+                    ICU hospitalization.
+                  </p>
+                </div>
+              </div>
+
+              {/* PERSONAL ACCIDENT */}
+
+              <div className="overflow-hidden rounded-xl border border-[#d6e2d9]">
+                <div className="flex items-center gap-3 bg-[#075e3d] px-4 py-3">
+                  <ShieldCheck className="h-4 w-4 text-white" />
+
+                  <div>
+                    <p className="text-[8px] font-bold uppercase tracking-wider text-[#b9e6c9]">
+                      Including Protection Benefit
+                    </p>
+
+                    <p className="text-sm font-bold text-white">
+                      Personal Accident Cover - 5 Lacs
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-[#f7fbf7] p-4 text-[10px] leading-relaxed text-[#42544d]">
+                  Inclusive of <strong>accidental death</strong> and{" "}
+                  <strong>total disability.</strong>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* =====================================================
+              GENERATE
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-[#c9ddcf] bg-[#f1f8f2] p-4 sm:p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[9px] font-bold uppercase tracking-wider text-[#779087]">
+                  Ready to Generate
+                </p>
+
+                <p className="mt-1 text-sm font-bold text-[#214a39]">
+                  {invoiceData.customerName || "Customer"} •{" "}
+                  {invoiceData.planName || "Plan"}
+                </p>
+
+                <p className="mt-0.5 text-[10px] text-[#6f8179]">
+                  Total payable:{" "}
+                  <strong className="text-[#176746]">
+                    ₹{formatINR(totalAmount)}
+                  </strong>{" "}
+                  including 5% GST
+                </p>
+              </div>
+
+              <button
+                type="submit"
+                className="flex items-center justify-center gap-2 rounded-full bg-[#075e3d] px-6 py-3.5 text-sm font-extrabold text-white shadow-md transition hover:bg-[#064f34] hover:shadow-lg active:scale-[0.99]"
+              >
+                <FileText className="h-4 w-4" />
+                Generate Invoice
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </section>
+        </form>
+
+        {/* =====================================================
+            COMPANY REGISTRATION DETAILS
+        ====================================================== */}
+
+        <div className="mt-5 border-t border-[#d9e4dc] pt-4 text-center">
+          <div className="flex flex-col items-center justify-center gap-1 sm:flex-row sm:gap-4">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#667b72]">
+              GSTIN :
+              <span className="ml-1 text-[#176746]">{COMPANY_GSTIN}</span>
+            </p>
+
+            <span className="hidden h-3 w-px bg-[#cbd9d1] sm:block" />
+
+            <p className="text-[10px] font-bold uppercase tracking-wider text-[#667b72]">
+              CIN :<span className="ml-1 text-[#176746]">{COMPANY_CIN}</span>
+            </p>
+          </div>
+
+          <p className="mt-2 text-[9px] leading-relaxed text-[#86968f]">
+            {COMPANY_NAME} · {COMPANY_ADDRESS}
+          </p>
+        </div>
+      </main>
+    </motion.div>
+  );
+}
