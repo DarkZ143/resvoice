@@ -6,8 +6,7 @@ export const initialInvoiceData: InvoiceData = {
   // =====================================================
   invoiceNumber: "",
 
-  // yyyy-mm-dd format because this will be used
-  // directly by the HTML date input.
+  // yyyy-mm-dd format for HTML date input
   issueDate: "",
 
   // =====================================================
@@ -28,17 +27,23 @@ export const initialInvoiceData: InvoiceData = {
 
   // =====================================================
   // PRICING
-  // GST IS FIXED AT 5%
+  //
+  // GST rate is fixed at 5%.
+  // Actual GST amount is entered manually.
   // =====================================================
   basePrice: 0,
+
   gstRate: 5,
+
+  gstAmount: 0,
+
   currency: "₹",
 
   // =====================================================
   // PAYMENT STATUS
-  // CUSTOM IS ALSO SUPPORTED
   // =====================================================
   paymentStatus: "PAID IN FULL",
+
   customPaymentStatus: "",
 
   // =====================================================
@@ -53,14 +58,18 @@ export const initialInvoiceData: InvoiceData = {
 
   companyCin: "U86909UW2026OPC257013",
 
-  // Keep blank until you provide these details.
   companySupportPhone: "",
+
   companyWebsite: "",
 
   // =====================================================
   // BENEFITS
   // =====================================================
   benefits: [
+    // ===================================================
+    // HEALTH & WELLNESS SERVICES
+    // ===================================================
+
     {
       id: "health-risk-assessment",
       title: "Health Risk Assessment",
