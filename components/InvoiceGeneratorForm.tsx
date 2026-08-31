@@ -19,9 +19,14 @@ import { useEffect, useState } from "react";
 
 import type { InvoiceData } from "@/types";
 
+/* =========================================================
+   COMPANY DETAILS
+========================================================= */
+
 const GST_RATE = 5;
 
 const COMPANY_GSTIN = "09AAQCR1885F1ZU";
+
 const COMPANY_CIN = "U86909UW2026OPC257013";
 
 const COMPANY_NAME = "Restore Health Services";
@@ -30,7 +35,7 @@ const COMPANY_ADDRESS =
   "A-1, Ground Floor, Sector 59, Noida, Gautam Buddha Nagar, UttarPradesh, 201301";
 
 /* =========================================================
-   FAMILY DESCRIPTIONS
+   FAMILY OPTIONS
 ========================================================= */
 
 const FAMILY_OPTIONS = [
@@ -62,7 +67,6 @@ const PLAN_OPTIONS = [
     planName: "Individual",
     family: "1A",
   },
-
   {
     id: "floater-20000",
     name: "Floater",
@@ -71,7 +75,6 @@ const PLAN_OPTIONS = [
     planName: "Floater",
     family: "2A",
   },
-
   {
     id: "floater-30000",
     name: "Floater",
@@ -80,7 +83,6 @@ const PLAN_OPTIONS = [
     planName: "Floater",
     family: "2A",
   },
-
   {
     id: "floater-50000",
     name: "Floater",
@@ -89,7 +91,6 @@ const PLAN_OPTIONS = [
     planName: "Floater",
     family: "2A + 2C",
   },
-
   {
     id: "exec-100000",
     name: "Exec Floater",
@@ -128,12 +129,20 @@ const getFamilyDescription = (family: string) => {
   );
 };
 
+/* =========================================================
+   PROPS
+========================================================= */
+
 interface InvoiceGeneratorFormProps {
   invoiceData: InvoiceData;
   onChange: (updated: InvoiceData) => void;
   onGenerate: () => void;
   onReset: () => void;
 }
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export function InvoiceGeneratorForm({
   invoiceData,
@@ -142,7 +151,9 @@ export function InvoiceGeneratorForm({
   onReset,
 }: InvoiceGeneratorFormProps) {
   /* =======================================================
-     BASE PRICE INPUT
+     BASE PRICE LOCAL INPUT
+
+     This keeps the visual input blank instead of showing 0.
   ======================================================== */
 
   const [basePriceInput, setBasePriceInput] = useState(
@@ -150,7 +161,17 @@ export function InvoiceGeneratorForm({
   );
 
   /* =======================================================
-     KEEP LOCAL PRICE INPUT IN SYNC
+     GST AMOUNT LOCAL INPUT
+
+     Same behavior as Base Price.
+  ======================================================== */
+
+  const [gstAmountInput, setGstAmountInput] = useState(
+    invoiceData.gstAmount > 0 ? String(invoiceData.gstAmount) : "",
+  );
+
+  /* =======================================================
+     SYNC BASE PRICE
   ======================================================== */
 
   useEffect(() => {
@@ -160,12 +181,26 @@ export function InvoiceGeneratorForm({
   }, [invoiceData.basePrice]);
 
   /* =======================================================
+     SYNC GST AMOUNT
+  ======================================================== */
+
+  useEffect(() => {
+    setGstAmountInput(
+      invoiceData.gstAmount > 0 ? String(invoiceData.gstAmount) : "",
+    );
+  }, [invoiceData.gstAmount]);
+
+  /* =======================================================
      PRICING
+
+     IMPORTANT:
+     GST is NOT calculated here.
+     Admin enters gstAmount manually.
   ======================================================== */
 
   const basePrice = Number(invoiceData.basePrice) || 0;
 
-  const gstAmount = (basePrice * GST_RATE) / 100;
+  const gstAmount = Number(invoiceData.gstAmount) || 0;
 
   const totalAmount = basePrice + gstAmount;
 
@@ -176,7 +211,7 @@ export function InvoiceGeneratorForm({
   const isCustomPlan = invoiceData.planName === "Custom Plan";
 
   /* =======================================================
-     SELECTED PREDEFINED PLAN
+     SELECTED PLAN
   ======================================================== */
 
   const selectedPlan =
@@ -192,7 +227,7 @@ export function InvoiceGeneratorForm({
     );
 
   /* =======================================================
-     GENERAL INPUT UPDATE
+     GENERIC INPUT HANDLER
   ======================================================== */
 
   const handleInputChange = (
@@ -206,33 +241,39 @@ export function InvoiceGeneratorForm({
   };
 
   /* =======================================================
-     PREDEFINED PLAN SELECT
+     PREDEFINED PLAN
   ======================================================== */
 
   const handleSelectPlan = (plan: (typeof PLAN_OPTIONS)[number]) => {
     const description = getFamilyDescription(plan.family);
 
+    /*
+     * Predefined plan automatically
+     * starts with the equivalent 5% GST.
+     *
+     * Admin can still edit the GST
+     * amount afterward.
+     */
+    const defaultGSTAmount = (plan.price * GST_RATE) / 100;
+
     setBasePriceInput(String(plan.price));
+
+    setGstAmountInput(String(defaultGSTAmount));
 
     onChange({
       ...invoiceData,
-
       planName: plan.planName,
-
       family: plan.family,
-
       planDescription: description,
-
       basePrice: plan.price,
-
       gstRate: GST_RATE,
-
+      gstAmount: defaultGSTAmount,
       tenure: "1 Year",
     });
   };
 
   /* =======================================================
-     CUSTOM PLAN SELECT
+     CUSTOM PLAN
   ======================================================== */
 
   const handleCustomPlan = () => {
@@ -240,27 +281,22 @@ export function InvoiceGeneratorForm({
 
     setBasePriceInput("");
 
+    setGstAmountInput("");
+
     onChange({
       ...invoiceData,
-
       planName: "Custom Plan",
-
       family: defaultFamily,
-
       planDescription: getFamilyDescription(defaultFamily),
-
       basePrice: 0,
-
       gstRate: GST_RATE,
-
+      gstAmount: 0,
       tenure: "1 Year",
     });
   };
 
   /* =======================================================
-     FAMILY CHANGE
-     
-     Family controls description automatically.
+     FAMILY
   ======================================================== */
 
   const handleFamilyChange = (family: string) => {
@@ -268,9 +304,7 @@ export function InvoiceGeneratorForm({
 
     onChange({
       ...invoiceData,
-
       family,
-
       planDescription: description,
     });
   };
@@ -282,24 +316,16 @@ export function InvoiceGeneratorForm({
   const handlePaymentStatusChange = (value: string) => {
     onChange({
       ...invoiceData,
-
       paymentStatus: value,
-
       customPaymentStatus:
         value === "CUSTOM" ? invoiceData.customPaymentStatus : "",
     });
   };
 
   /* =======================================================
-     BASE PRICE CHANGE
+     BASE PRICE
      
-     IMPORTANT:
-     - Empty string is allowed in UI.
-     - Only digits are accepted.
-     - No min / max / step.
-     - No decimal.
-     - No negative.
-     - No letters.
+     NUMBERS ONLY
   ======================================================== */
 
   const handleBasePriceChange = (value: string) => {
@@ -309,10 +335,26 @@ export function InvoiceGeneratorForm({
 
     onChange({
       ...invoiceData,
-
       basePrice: numericValue === "" ? 0 : Number(numericValue),
+    });
+  };
 
-      gstRate: GST_RATE,
+  /* =======================================================
+     GST AMOUNT
+     
+     NUMBERS ONLY
+     
+     NO FORMULA
+  ======================================================== */
+
+  const handleGSTAmountChange = (value: string) => {
+    const numericValue = value.replace(/\D/g, "");
+
+    setGstAmountInput(numericValue);
+
+    onChange({
+      ...invoiceData,
+      gstAmount: numericValue === "" ? 0 : Number(numericValue),
     });
   };
 
@@ -490,7 +532,7 @@ export function InvoiceGeneratorForm({
             </div>
 
             <div className="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-2 sm:px-6">
-              {/* Invoice Number */}
+              {/* INVOICE NUMBER */}
 
               <div>
                 <label
@@ -517,7 +559,7 @@ export function InvoiceGeneratorForm({
                 </div>
               </div>
 
-              {/* Invoice Date */}
+              {/* INVOICE DATE */}
 
               <div>
                 <label
@@ -543,7 +585,7 @@ export function InvoiceGeneratorForm({
                 </div>
               </div>
 
-              {/* Payment Status */}
+              {/* PAYMENT STATUS */}
 
               <div>
                 <label
@@ -573,7 +615,7 @@ export function InvoiceGeneratorForm({
                 </div>
               </div>
 
-              {/* Custom Payment Status */}
+              {/* CUSTOM PAYMENT STATUS */}
 
               {invoiceData.paymentStatus === "CUSTOM" && (
                 <div>
@@ -627,7 +669,7 @@ export function InvoiceGeneratorForm({
             </div>
 
             <div className="space-y-4 px-5 py-5 sm:px-6">
-              {/* Customer Name */}
+              {/* CUSTOMER NAME */}
 
               <div>
                 <label
@@ -650,7 +692,7 @@ export function InvoiceGeneratorForm({
                 />
               </div>
 
-              {/* Mobile / City */}
+              {/* MOBILE / CITY */}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -704,7 +746,7 @@ export function InvoiceGeneratorForm({
                 </div>
               </div>
 
-              {/* State */}
+              {/* STATE */}
 
               <div>
                 <label
@@ -870,9 +912,7 @@ export function InvoiceGeneratorForm({
                 );
               })}
 
-              {/* =================================================
-                  CUSTOM PLAN
-              ================================================== */}
+              {/* CUSTOM PLAN */}
 
               <button
                 type="button"
@@ -902,11 +942,12 @@ export function InvoiceGeneratorForm({
                     </div>
 
                     <p className="mt-0.5 text-xs font-medium text-[#587067]">
-                      Choose family, enter validity and set your own price.
+                      Choose family, enter validity, base price and GST amount.
                     </p>
 
                     <span className="mt-1.5 inline-block rounded border border-[#cbded2] bg-white px-2 py-0.5 text-[8px] font-medium text-[#5a7469]">
-                      Description is automatically generated from family
+                      GST 5% label remains fixed • GST amount is manually
+                      entered
                     </span>
                   </div>
 
@@ -950,9 +991,7 @@ export function InvoiceGeneratorForm({
             </div>
 
             <div className="space-y-4 px-5 py-5 sm:px-6">
-              {/* =================================================
-                  FAMILY
-              ================================================== */}
+              {/* FAMILY */}
 
               <div>
                 <label
@@ -979,14 +1018,11 @@ export function InvoiceGeneratorForm({
                 </select>
 
                 <p className="mt-1.5 text-[9px] text-[#819189]">
-                  Select family and the plan description will update
-                  automatically.
+                  Description automatically changes with the selected family.
                 </p>
               </div>
 
-              {/* =================================================
-                  PLAN DESCRIPTION
-              ================================================== */}
+              {/* PLAN DESCRIPTION */}
 
               <div>
                 <label
@@ -1000,8 +1036,8 @@ export function InvoiceGeneratorForm({
                   id="plan-description-input"
                   rows={3}
                   value={
-                    invoiceData.planDescription ||
-                    getFamilyDescription(invoiceData.family)
+                    getFamilyDescription(invoiceData.family) ||
+                    invoiceData.planDescription
                   }
                   readOnly
                   className="w-full resize-none cursor-not-allowed rounded-xl border border-[#d8e4dc] bg-[#f3f8f4] px-4 py-3 text-sm font-medium leading-relaxed text-[#315447] outline-none"
@@ -1013,9 +1049,7 @@ export function InvoiceGeneratorForm({
                 </p>
               </div>
 
-              {/* =================================================
-                  VALIDITY / BASE PRICE
-              ================================================== */}
+              {/* VALIDITY / BASE PRICE */}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 {/* VALIDITY */}
@@ -1041,9 +1075,7 @@ export function InvoiceGeneratorForm({
                   />
                 </div>
 
-                {/* =================================================
-                    BASE PRICE - FIXED BEHAVIOR
-                ================================================== */}
+                {/* BASE PRICE */}
 
                 <div>
                   <label
@@ -1100,21 +1132,80 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <p className="mt-1.5 text-[9px] text-[#819189]">
-                    Numbers only. Enter the premium amount manually.
+                    Numbers only.
                   </p>
                 </div>
               </div>
 
-              {/* =================================================
-                  GST
-              ================================================== */}
+              {/* GST AMOUNT */}
+
+              <div>
+                <label
+                  htmlFor="gst-amount-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  GST Amount
+                </label>
+
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-lg font-bold text-[#667c73]">
+                    ₹
+                  </span>
+
+                  <input
+                    id="gst-amount-input"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    required
+                    value={gstAmountInput}
+                    onChange={(event) =>
+                      handleGSTAmountChange(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      const allowedKeys = [
+                        "Backspace",
+                        "Delete",
+                        "Tab",
+                        "ArrowLeft",
+                        "ArrowRight",
+                        "Home",
+                        "End",
+                      ];
+
+                      if (allowedKeys.includes(event.key)) {
+                        return;
+                      }
+
+                      if (!/^\d$/.test(event.key)) {
+                        event.preventDefault();
+                      }
+                    }}
+                    onPaste={(event) => {
+                      event.preventDefault();
+
+                      const pastedText = event.clipboardData.getData("text");
+
+                      handleGSTAmountChange(pastedText);
+                    }}
+                    placeholder="Enter GST amount"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  />
+                </div>
+
+                <p className="mt-1.5 text-[9px] text-[#819189]">
+                  GST rate is fixed at 5%. Enter the actual GST amount manually.
+                </p>
+              </div>
+
+              {/* GST RATE DISPLAY */}
 
               <div className="flex items-center justify-between rounded-xl border border-[#d4e5d9] bg-[#f4faf4] px-4 py-3">
                 <div>
                   <p className="text-sm font-bold text-[#24493b]">GST Rate</p>
 
                   <p className="text-[9px] text-[#75887f]">
-                    Fixed GST applied to every invoice.
+                    Rate shown for invoice reference only.
                   </p>
                 </div>
 
@@ -1138,6 +1229,8 @@ export function InvoiceGeneratorForm({
 
             <div className="p-5 sm:p-6">
               <div className="space-y-3">
+                {/* BASE */}
+
                 <div className="flex items-center justify-between border-b border-[#e3ebe6] pb-3">
                   <span className="text-sm text-[#61756c]">Base Price</span>
 
@@ -1145,6 +1238,8 @@ export function InvoiceGeneratorForm({
                     ₹{formatINR(basePrice)}
                   </span>
                 </div>
+
+                {/* GST */}
 
                 <div className="flex items-center justify-between border-b border-[#e3ebe6] pb-3">
                   <span className="text-sm text-[#61756c]">GST (5%)</span>
@@ -1154,6 +1249,8 @@ export function InvoiceGeneratorForm({
                   </span>
                 </div>
 
+                {/* TOTAL */}
+
                 <div className="flex items-center justify-between pt-1">
                   <div>
                     <p className="text-sm font-extrabold uppercase text-[#176746]">
@@ -1161,7 +1258,7 @@ export function InvoiceGeneratorForm({
                     </p>
 
                     <p className="mt-0.5 text-[9px] text-[#7b8d85]">
-                      Inclusive of 5% GST
+                      Base Price + Entered GST
                     </p>
                   </div>
 
@@ -1279,7 +1376,7 @@ export function InvoiceGeneratorForm({
                   <strong className="text-[#176746]">
                     ₹{formatINR(totalAmount)}
                   </strong>{" "}
-                  including 5% GST
+                  including entered GST
                 </p>
               </div>
 

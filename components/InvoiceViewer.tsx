@@ -80,8 +80,8 @@ const formatInvoiceDate = (value: string) => {
 
 /* ==========================================================
    INVOICE LOGO
-   Normal img is used inside the PDF document because it
-   is more reliable with html2canvas.
+   Normal img is intentionally used inside the PDF
+   document because html2canvas handles it more reliably.
 ========================================================== */
 
 function InvoiceLogo({ className = "" }: { className?: string }) {
@@ -174,11 +174,17 @@ export function InvoiceViewer({
 
   /* ========================================================
      PRICING
+
+     IMPORTANT:
+     GST IS NOT CALCULATED FROM 5%.
+
+     The actual GST amount comes directly from
+     invoiceData.gstAmount.
   ======================================================== */
 
   const basePrice = Number(invoiceData.basePrice) || 0;
 
-  const gstAmount = (basePrice * GST_RATE) / 100;
+  const gstAmount = Number(invoiceData.gstAmount) || 0;
 
   const totalAmount = basePrice + gstAmount;
 
@@ -197,9 +203,7 @@ export function InvoiceViewer({
   const planName = invoiceData.planName?.trim() || "Plan";
 
   /*
-   * Description is determined from family.
-   * This protects the final invoice from stale
-   * description data.
+   * Always derive final description from family.
    */
   const planDescription =
     FAMILY_DESCRIPTIONS[family] ||
@@ -225,20 +229,10 @@ export function InvoiceViewer({
     element: HTMLElement,
     html2canvas: typeof import("html2canvas").default,
   ) => {
-    /*
-     * Wait until every image inside the page
-     * has either loaded successfully or failed.
-     */
     await waitForImages(element);
 
-    /*
-     * Allow layout/fonts/image rendering to settle.
-     */
     await new Promise<void>((resolve) => setTimeout(resolve, 300));
 
-    /*
-     * Force a fixed A4 CSS width while capturing.
-     */
     const previousWidth = element.style.width;
 
     const previousMaxWidth = element.style.maxWidth;
@@ -249,6 +243,9 @@ export function InvoiceViewer({
 
     const previousMinHeight = element.style.minHeight;
 
+    /*
+     * Fixed A4 CSS dimensions.
+     */
     element.style.width = "794px";
 
     element.style.maxWidth = "794px";
@@ -303,9 +300,7 @@ export function InvoiceViewer({
   /* ========================================================
      DOWNLOAD PDF
      
-     EXACTLY:
-     Page 1 -> PDF Page 1
-     Page 2 -> PDF Page 2
+     EXACTLY 2 PAGES
   ======================================================== */
 
   const handleDownloadPDF = async () => {
@@ -327,20 +322,15 @@ export function InvoiceViewer({
         import("jspdf"),
       ]);
 
-      /* ================================================
-           CAPTURE PAGE 1
-        ================================================= */
-
+      /*
+       * Capture each page separately.
+       */
       const canvas1 = await capturePage(page1, html2canvas);
-
-      /* ================================================
-           CAPTURE PAGE 2
-        ================================================= */
 
       const canvas2 = await capturePage(page2, html2canvas);
 
-      /* ================================================
-           CREATE EXACT A4 PDF
+      /* ==================================================
+           CREATE A4 PDF
         ================================================= */
 
       const pdf = new jsPDF({
@@ -357,26 +347,17 @@ export function InvoiceViewer({
 
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      /*
-       * Keep a very small safe border.
-       */
       const margin = 4;
 
       const printableWidth = pdfWidth - margin * 2;
 
       const printableHeight = pdfHeight - margin * 2;
 
-      /* ================================================
-           ADD CANVAS TO PAGE
+      /* ==================================================
+           ADD CANVAS WITHOUT CROPPING
         ================================================= */
 
       const addCanvasToPage = (canvas: HTMLCanvasElement) => {
-        /*
-         * Fit entire canvas into A4.
-         *
-         * This uses MIN so nothing can be
-         * cropped from any side.
-         */
         const scale = Math.min(
           printableWidth / canvas.width,
 
@@ -387,9 +368,6 @@ export function InvoiceViewer({
 
         const imageHeight = canvas.height * scale;
 
-        /*
-         * Center the entire image.
-         */
         const x = (pdfWidth - imageWidth) / 2;
 
         const y = (pdfHeight - imageHeight) / 2;
@@ -406,42 +384,36 @@ export function InvoiceViewer({
         );
       };
 
-      /* ================================================
-           PDF PAGE 1
+      /* ==================================================
+           PAGE 1
         ================================================= */
 
       addCanvasToPage(canvas1);
 
-      /* ================================================
-           PDF PAGE 2
+      /* ==================================================
+           PAGE 2
         ================================================= */
 
       pdf.addPage();
 
       addCanvasToPage(canvas2);
 
-      /* ================================================
-           PHONE NUMBER FILE NAME
+      /* ==================================================
+           FILE NAME
+           
+           Based on entered phone number.
         ================================================= */
 
-      /*
-       * Only numeric characters are kept.
-       *
-       * Example:
-       * +91 98765 43210
-       * ->
-       * 919876543210-Invoice.pdf
-       */
       const phoneNumber = (invoiceData.phoneNumber || "").replace(/\D/g, "");
 
       const fileName = `${phoneNumber || "Customer"}-Invoice.pdf`;
 
       /*
-       * Exactly TWO PDF pages.
+       * Exactly two pages.
        */
       pdf.save(fileName);
 
-      /* ================================================
+      /* ==================================================
            SUCCESS EFFECT
         ================================================= */
 
