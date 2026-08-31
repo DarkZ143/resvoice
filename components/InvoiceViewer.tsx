@@ -35,8 +35,7 @@ const COMPANY_CIN = "U86909UW2026OPC257013";
  *
  * IMPORTANT:
  * GST amount is NOT calculated from 5%.
- * The actual GST amount comes directly from
- * invoiceData.gstAmount.
+ * The actual GST amount comes directly from invoiceData.gstAmount.
  */
 const GST_RATE = 5;
 
@@ -46,9 +45,7 @@ const GST_RATE = 5;
 
 const FAMILY_DESCRIPTIONS: Record<string, string> = {
   "1A": "Annual health plan membership for individual coverage.",
-
   "2A": "Annual family health plan membership for 2 adults.",
-
   "2A + 2C":
     "Annual family health plan membership for 2 adults and 2 children.",
 };
@@ -88,9 +85,6 @@ const formatInvoiceDate = (value: string) => {
 
 /* ==========================================================
    INVOICE LOGO
-
-   Normal img is intentionally used inside the invoice
-   document because html2canvas handles it more reliably.
 ========================================================== */
 
 function InvoiceLogo({ className = "" }: { className?: string }) {
@@ -123,7 +117,6 @@ const waitForImages = async (root: HTMLElement) => {
           const finish = () => resolve();
 
           image.addEventListener("load", finish, { once: true });
-
           image.addEventListener("error", finish, { once: true });
         }),
     ),
@@ -176,20 +169,21 @@ export function InvoiceViewer({
   onEdit,
 }: InvoiceViewerProps) {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-
   const [copied, setCopied] = useState(false);
 
   const invoiceDocRef = useRef<HTMLDivElement>(null);
 
   /* ========================================================
      PRICING
-
-     NO GST CALCULATION.
-     GST AMOUNT IS MANUAL.
   ======================================================== */
 
   const basePrice = Number(invoiceData.basePrice) || 0;
 
+  /*
+   * Manual GST amount.
+   *
+   * No percentage formula is used here.
+   */
   const gstAmount = Number(invoiceData.gstAmount) || 0;
 
   const totalAmount = basePrice + gstAmount;
@@ -201,34 +195,53 @@ export function InvoiceViewer({
   const invoiceDate = formatInvoiceDate(invoiceData.issueDate);
 
   /* ========================================================
+     CUSTOMER
+  ======================================================== */
+
+  const email = String(invoiceData.email ?? "").trim() || "-";
+
+  const pincode = String(invoiceData.pincode ?? "").trim() || "-";
+
+  /* ========================================================
      PLAN
   ======================================================== */
 
-  const family = invoiceData.family?.trim() || "—";
+  const family = String(invoiceData.family ?? "").trim() || "—";
 
-  const planName = invoiceData.planName?.trim() || "Plan";
+  const planName = String(invoiceData.planName ?? "").trim() || "Plan";
 
   const planDescription =
     FAMILY_DESCRIPTIONS[family] ||
-    invoiceData.planDescription?.trim() ||
+    String(invoiceData.planDescription ?? "").trim() ||
     "Health plan membership";
 
-  const validity = invoiceData.tenure?.trim() || "1 Year";
+  const validity = String(invoiceData.tenure ?? "").trim() || "1 Year";
 
   /* ========================================================
      PAYMENT STATUS
+
+     This is deliberately normalized so the PDF never shows
+     an empty payment-status pill.
+
+     Supported:
+     - PAID IN FULL
+     - PENDING
+     - PARTIALLY PAID
+     - OVERDUE
+     - CUSTOM
   ======================================================== */
 
-  const paymentStatus =
-    invoiceData.paymentStatus === "CUSTOM"
-      ? invoiceData.customPaymentStatus?.trim() || "CUSTOM"
-      : invoiceData.paymentStatus?.trim() || "PAID IN FULL";
+  const paymentStatus = (() => {
+    const selectedStatus = String(invoiceData.paymentStatus ?? "").trim();
 
-  /* ========================================================
-     PINCODE
-  ======================================================== */
+    const customStatus = String(invoiceData.customPaymentStatus ?? "").trim();
 
-  const pincode = invoiceData.pincode?.trim() || "-";
+    if (selectedStatus.toUpperCase() === "CUSTOM") {
+      return customStatus || "CUSTOM";
+    }
+
+    return selectedStatus || "PAID IN FULL";
+  })();
 
   /* ========================================================
      CAPTURE ONE A4 PAGE
@@ -245,17 +258,13 @@ export function InvoiceViewer({
     });
 
     const previousWidth = element.style.width;
-
     const previousMaxWidth = element.style.maxWidth;
-
     const previousMinWidth = element.style.minWidth;
-
     const previousHeight = element.style.height;
-
     const previousMinHeight = element.style.minHeight;
 
     /*
-     * Exact A4 CSS dimensions.
+     * Fixed A4 CSS dimensions.
      */
     element.style.width = "794px";
     element.style.maxWidth = "794px";
@@ -292,22 +301,17 @@ export function InvoiceViewer({
       });
     } finally {
       element.style.width = previousWidth;
-
       element.style.maxWidth = previousMaxWidth;
-
       element.style.minWidth = previousMinWidth;
-
       element.style.height = previousHeight;
-
       element.style.minHeight = previousMinHeight;
     }
   };
 
   /* ========================================================
      DOWNLOAD PDF
-
-     PAGE 1 -> PDF PAGE 1
-     PAGE 2 -> PDF PAGE 2
+     
+     EXACTLY TWO PAGES
   ======================================================== */
 
   const handleDownloadPDF = async () => {
@@ -317,7 +321,6 @@ export function InvoiceViewer({
 
     try {
       const page1 = document.getElementById("invoice-page-1");
-
       const page2 = document.getElementById("invoice-page-2");
 
       if (!page1 || !page2) {
@@ -331,19 +334,19 @@ export function InvoiceViewer({
 
       /* ==================================================
          CAPTURE PAGE 1
-      ================================================= */
+      ================================================== */
 
       const canvas1 = await capturePage(page1, html2canvas);
 
       /* ==================================================
          CAPTURE PAGE 2
-      ================================================= */
+      ================================================== */
 
       const canvas2 = await capturePage(page2, html2canvas);
 
       /* ==================================================
          CREATE A4 PDF
-      ================================================= */
+      ================================================== */
 
       const pdf = new jsPDF({
         orientation: "portrait",
@@ -353,23 +356,21 @@ export function InvoiceViewer({
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
-
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
       const margin = 4;
 
       const printableWidth = pdfWidth - margin * 2;
-
       const printableHeight = pdfHeight - margin * 2;
 
       /* ==================================================
          ADD CANVAS WITHOUT CROPPING
-      ================================================= */
+      ================================================== */
 
       const addCanvasToPage = (canvas: HTMLCanvasElement) => {
         /*
-         * Entire canvas is fitted into A4.
-         * Nothing is cropped.
+         * Fit entire page into printable A4 area.
+         * This prevents cropping.
          */
         const scale = Math.min(
           printableWidth / canvas.width,
@@ -377,11 +378,9 @@ export function InvoiceViewer({
         );
 
         const imageWidth = canvas.width * scale;
-
         const imageHeight = canvas.height * scale;
 
         const x = (pdfWidth - imageWidth) / 2;
-
         const y = (pdfHeight - imageHeight) / 2;
 
         pdf.addImage(
@@ -398,13 +397,13 @@ export function InvoiceViewer({
 
       /* ==================================================
          PDF PAGE 1
-      ================================================= */
+      ================================================== */
 
       addCanvasToPage(canvas1);
 
       /* ==================================================
          PDF PAGE 2
-      ================================================= */
+      ================================================== */
 
       pdf.addPage();
 
@@ -412,20 +411,23 @@ export function InvoiceViewer({
 
       /* ==================================================
          FILE NAME = PHONE NUMBER
-      ================================================= */
+      ================================================== */
 
-      const phoneNumber = (invoiceData.phoneNumber || "").replace(/\D/g, "");
+      const phoneNumber = String(invoiceData.phoneNumber ?? "").replace(
+        /\D/g,
+        "",
+      );
 
       const fileName = `${phoneNumber || "Customer"}-Invoice.pdf`;
 
       /*
-       * Exactly TWO pages.
+       * Exactly two PDF pages.
        */
       pdf.save(fileName);
 
       /* ==================================================
          SUCCESS EFFECT
-      ================================================= */
+      ================================================== */
 
       try {
         confetti({
@@ -457,13 +459,14 @@ ${COMPANY_ADDRESS}
 GSTIN: ${COMPANY_GSTIN}
 CIN: ${COMPANY_CIN}
 
-Invoice No: ${invoiceData.invoiceNumber}
+Invoice No: ${invoiceData.invoiceNumber || "-"}
 Invoice Date: ${invoiceDate}
 
-Customer: ${invoiceData.customerName}
-Mobile: ${invoiceData.phoneNumber}
-City: ${invoiceData.city}
-State: ${invoiceData.state}
+Customer: ${invoiceData.customerName || "-"}
+Mobile: ${invoiceData.phoneNumber || "-"}
+Email: ${email}
+City: ${invoiceData.city || "-"}
+State: ${invoiceData.state || "-"}
 Pincode: ${pincode}
 
 Plan: ${planName}
@@ -638,10 +641,12 @@ Payment Status: ${paymentStatus}`;
                 CUSTOMER
             ================================================= */}
 
-            <div className="mt-6 grid grid-cols-4 border border-[#d8e5db] bg-[#f4faf4]">
+            <div className="mt-6 grid grid-cols-2 border border-[#d8e5db] bg-[#f4faf4] sm:grid-cols-5">
               <InfoCell label="Customer" value={invoiceData.customerName} />
 
               <InfoCell label="Mobile" value={invoiceData.phoneNumber} />
+
+              <InfoCell label="Email" value={email} />
 
               <InfoCell label="City" value={invoiceData.city} />
 
@@ -929,6 +934,14 @@ Payment Status: ${paymentStatus}`;
                   </div>
 
                   <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                    <span className="text-[10px] text-[#81908a]">Email</span>
+
+                    <strong className="max-w-[150px] break-all text-right text-[10px] font-bold leading-tight text-[#264338]">
+                      {email}
+                    </strong>
+                  </div>
+
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
                     <span className="text-[10px] text-[#81908a]">City</span>
 
                     <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
@@ -1002,13 +1015,15 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
+                  {/* PAYMENT STATUS */}
+
                   <div className="grid grid-cols-[1fr_auto] px-5 py-2.5">
                     <span className="text-[10px] text-[#81908a]">
                       Payment Status
                     </span>
 
-                    <strong className="max-w-[150px] break-words text-right text-[10px] uppercase text-[#176746]">
-                      {paymentStatus}
+                    <strong className="max-w-[150px] break-words text-right text-[10px] font-extrabold uppercase leading-tight text-[#176746]">
+                      {paymentStatus || "PAID IN FULL"}
                     </strong>
                   </div>
                 </div>
@@ -1040,9 +1055,9 @@ Payment Status: ${paymentStatus}`;
                     Payment Status
                   </p>
 
-                  <div className="mt-1 inline-flex max-w-full rounded-full bg-[#edf7ea] px-3 py-1.5">
-                    <span className="break-words text-[9px] font-extrabold uppercase text-[#176746]">
-                      {paymentStatus}
+                  <div className="mt-1 flex min-h-[30px] min-w-[120px] max-w-full items-center justify-center rounded-full bg-[#edf7ea] px-4 py-1.5">
+                    <span className="block whitespace-normal break-words text-center text-[9px] font-extrabold uppercase leading-tight text-[#176746]">
+                      {paymentStatus || "PAID IN FULL"}
                     </span>
                   </div>
                 </div>
@@ -1095,13 +1110,14 @@ Payment Status: ${paymentStatus}`;
 
             <div className="mt-8 border border-[#d0dfd3] bg-[#f5faf5] p-4">
               <h4 className="text-[10px] font-extrabold uppercase tracking-wide text-[#176746]">
-                Important Note
+                Important Note{" "}
+                <strong>( Reason for non-refund and non-cancellation )</strong>
               </h4>
 
               <p className="mt-2 text-[9.5px] leading-relaxed text-[#3e5049]">
-                Once the plan is issued, it can not be cancelled or refunded.
-                This invoice is system generated and is intended as a customer
-                plan and benefit summary.
+                Since the applicable amount is transferred to the respective
+                service partner after the policy is issued, cancellation and
+                refund cannot be processed after issuance.
               </p>
             </div>
 

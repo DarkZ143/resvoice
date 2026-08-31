@@ -4,6 +4,7 @@ export const initialInvoiceData: InvoiceData = {
   // =====================================================
   // INVOICE DETAILS
   // =====================================================
+
   invoiceNumber: "",
 
   // yyyy-mm-dd format for HTML date input
@@ -12,8 +13,10 @@ export const initialInvoiceData: InvoiceData = {
   // =====================================================
   // CUSTOMER DETAILS
   // =====================================================
+
   customerName: "",
   phoneNumber: "",
+  email: "",
   city: "",
   state: "",
   pincode: "",
@@ -21,6 +24,7 @@ export const initialInvoiceData: InvoiceData = {
   // =====================================================
   // PLAN DETAILS
   // =====================================================
+
   planName: "",
   planDescription: "",
   family: "",
@@ -29,9 +33,10 @@ export const initialInvoiceData: InvoiceData = {
   // =====================================================
   // PRICING
   //
-  // GST rate is fixed at 5%.
+  // GST rate is fixed/reference at 5%.
   // Actual GST amount is entered manually by admin.
   // =====================================================
+
   basePrice: 0,
   gstRate: 5,
   gstAmount: 0,
@@ -39,15 +44,15 @@ export const initialInvoiceData: InvoiceData = {
 
   // =====================================================
   // PAYMENT STATUS
-  //
-  // CUSTOM is supported from the payment dropdown.
   // =====================================================
+
   paymentStatus: "PAID IN FULL",
   customPaymentStatus: "",
 
   // =====================================================
   // COMPANY DETAILS
   // =====================================================
+
   companyName: "Restore Health Services",
 
   companyAddress:
@@ -64,6 +69,7 @@ export const initialInvoiceData: InvoiceData = {
   // =====================================================
   // BENEFITS
   // =====================================================
+
   benefits: [
     // ===================================================
     // HEALTH & WELLNESS SERVICES

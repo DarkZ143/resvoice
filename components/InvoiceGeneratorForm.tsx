@@ -735,9 +735,11 @@ export function InvoiceGeneratorForm({
                 />
               </div>
 
-              {/* MOBILE / CITY */}
+              {/* MOBILE / EMAIL */}
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* MOBILE */}
+
                 <div>
                   <label
                     htmlFor="phone-input"
@@ -753,6 +755,7 @@ export function InvoiceGeneratorForm({
                       id="phone-input"
                       required
                       type="tel"
+                      inputMode="tel"
                       value={invoiceData.phoneNumber}
                       onChange={(event) =>
                         handleInputChange("phoneNumber", event.target.value)
@@ -763,29 +766,69 @@ export function InvoiceGeneratorForm({
                   </div>
                 </div>
 
+                {/* EMAIL */}
+
                 <div>
                   <label
-                    htmlFor="city-input"
+                    htmlFor="email-input"
                     className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
                   >
-                    City
+                    Email Address
                   </label>
 
                   <div className="relative">
-                    <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+                    <svg
+                      className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      aria-hidden="true"
+                    >
+                      <rect x="3" y="5" width="18" height="14" rx="2" />
+                      <path d="m3 7 9 6 9-6" />
+                    </svg>
 
                     <input
-                      id="city-input"
+                      id="email-input"
                       required
-                      type="text"
-                      value={invoiceData.city}
+                      type="email"
+                      autoComplete="email"
+                      value={invoiceData.email}
                       onChange={(event) =>
-                        handleInputChange("city", event.target.value)
+                        handleInputChange("email", event.target.value)
                       }
-                      placeholder="Enter city"
+                      placeholder="customer@example.com"
                       className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* CITY */}
+
+              <div>
+                <label
+                  htmlFor="city-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  City
+                </label>
+
+                <div className="relative">
+                  <MapPin className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                  <input
+                    id="city-input"
+                    required
+                    type="text"
+                    value={invoiceData.city}
+                    onChange={(event) =>
+                      handleInputChange("city", event.target.value)
+                    }
+                    placeholder="Enter city"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  />
                 </div>
               </div>
 

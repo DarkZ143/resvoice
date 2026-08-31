@@ -16,7 +16,6 @@ export interface InvoiceData {
   // =========================================================
 
   invoiceNumber: string;
-
   issueDate: string;
 
   // =========================================================
@@ -24,13 +23,10 @@ export interface InvoiceData {
   // =========================================================
 
   customerName: string;
-
   phoneNumber: string;
-
+  email: string;
   city: string;
-
   state: string;
-
   pincode: string;
 
   // =========================================================
@@ -38,11 +34,8 @@ export interface InvoiceData {
   // =========================================================
 
   planName: string;
-
   planDescription: string;
-
   family: string;
-
   tenure: string;
 
   // =========================================================
@@ -53,11 +46,12 @@ export interface InvoiceData {
 
   /*
    * GST rate is fixed/reference at 5%.
+   * GST is NOT calculated automatically.
    */
   gstRate: number;
 
   /*
-   * Actual GST amount is manually entered
+   * Actual GST amount is entered manually
    * by the admin.
    */
   gstAmount: number;
@@ -68,8 +62,19 @@ export interface InvoiceData {
   // Payment
   // =========================================================
 
+  /*
+   * Supported values include:
+   * PAID IN FULL
+   * PENDING
+   * PARTIALLY PAID
+   * OVERDUE
+   * CUSTOM
+   */
   paymentStatus: string;
 
+  /*
+   * Used only when paymentStatus === "CUSTOM".
+   */
   customPaymentStatus: string;
 
   // =========================================================
@@ -77,15 +82,10 @@ export interface InvoiceData {
   // =========================================================
 
   companyName: string;
-
   companyAddress: string;
-
   companyGstin: string;
-
   companyCin: string;
-
   companySupportPhone: string;
-
   companyWebsite: string;
 
   // =========================================================
