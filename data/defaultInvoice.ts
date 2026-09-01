@@ -11,6 +11,31 @@ export const initialInvoiceData: InvoiceData = {
   issueDate: "",
 
   // =====================================================
+  // TRANSACTION DETAILS
+  // =====================================================
+
+  /*
+   * Product selected for the transaction.
+   *
+   * Examples:
+   * 1A
+   * 2A
+   * 2A + 2C
+   * Custom Plan (2A)
+   */
+  productName: "",
+
+  /*
+   * Payment / transaction reference ID.
+   */
+  transactionId: "",
+
+  /*
+   * yyyy-mm-ddTHH:mm format for HTML datetime-local input.
+   */
+  transactionDate: "",
+
+  // =====================================================
   // CUSTOMER DETAILS
   // =====================================================
 
@@ -62,9 +87,9 @@ export const initialInvoiceData: InvoiceData = {
 
   companyCin: "U86909UW2026OPC257013",
 
-  companySupportPhone: "",
+  companySupportPhone: "9289250468",
 
-  companyWebsite: "",
+  companyWebsite: "restorehealthservices.in",
 
   // =====================================================
   // BENEFITS

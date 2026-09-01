@@ -19,6 +19,31 @@ export interface InvoiceData {
   issueDate: string;
 
   // =========================================================
+  // Transaction
+  // =========================================================
+
+  /*
+   * Product selected for this transaction.
+   * Example:
+   * 1A
+   * 2A
+   * 2A + 2C
+   * Custom Plan (2A)
+   */
+  productName: string;
+
+  /*
+   * Transaction / payment reference ID.
+   */
+  transactionId: string;
+
+  /*
+   * Transaction date and time.
+   * Stored as a datetime-local compatible string.
+   */
+  transactionDate: string;
+
+  // =========================================================
   // Customer
   // =========================================================
 
@@ -45,14 +70,13 @@ export interface InvoiceData {
   basePrice: number;
 
   /*
-   * GST rate is fixed/reference at 5%.
-   * GST is NOT calculated automatically.
+   * GST is displayed as a fixed/reference rate of 5%.
+   * GST amount is NOT calculated automatically.
    */
   gstRate: number;
 
   /*
-   * Actual GST amount is entered manually
-   * by the admin.
+   * Actual GST amount entered manually by admin.
    */
   gstAmount: number;
 
@@ -63,7 +87,7 @@ export interface InvoiceData {
   // =========================================================
 
   /*
-   * Supported values include:
+   * Supported values:
    * PAID IN FULL
    * PENDING
    * PARTIALLY PAID

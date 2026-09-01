@@ -1,8 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useRef, useState } from "react";
-import { ArrowLeft, Download, Share2, Check } from "lucide-react";
+import { useRef, useState, type ReactNode } from "react";
+import {
+  ArrowLeft,
+  Download,
+  Share2,
+  Check,
+  Phone,
+  Globe,
+  FileText,
+  XCircle,
+  IndianRupee,
+} from "lucide-react";
 import confetti from "canvas-confetti";
 
 import type { InvoiceData } from "@/types";
@@ -26,18 +36,17 @@ const COMPANY_GSTIN = "09AAQCR1885F1ZU";
 
 const COMPANY_CIN = "U86909UW2026OPC257013";
 
+const COMPANY_PHONE = "9289250468";
+
+const COMPANY_WEBSITE = "restorehealthservices.in";
+
 /* ==========================================================
    TAX
 ========================================================== */
 
-/*
- * GST 5% is only displayed as the fixed/reference rate.
- *
- * IMPORTANT:
- * GST amount is NOT calculated from 5%.
- * The actual GST amount comes directly from invoiceData.gstAmount.
- */
 const GST_RATE = 5;
+
+const GST_LABEL = `GST (${GST_RATE}%)`;
 
 /* ==========================================================
    FAMILY DESCRIPTIONS
@@ -45,7 +54,9 @@ const GST_RATE = 5;
 
 const FAMILY_DESCRIPTIONS: Record<string, string> = {
   "1A": "Annual health plan membership for individual coverage.",
+
   "2A": "Annual family health plan membership for 2 adults.",
+
   "2A + 2C":
     "Annual family health plan membership for 2 adults and 2 children.",
 };
@@ -84,6 +95,31 @@ const formatInvoiceDate = (value: string) => {
 };
 
 /* ==========================================================
+   TRANSACTION DATE + TIME FORMATTER
+
+   Keeps both date and time from datetime-local input.
+========================================================== */
+
+const formatTransactionDateTime = (value: string) => {
+  if (!value) return "-";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value.replace("T", " ");
+  }
+
+  return date.toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+/* ==========================================================
    INVOICE LOGO
 ========================================================== */
 
@@ -117,6 +153,7 @@ const waitForImages = async (root: HTMLElement) => {
           const finish = () => resolve();
 
           image.addEventListener("load", finish, { once: true });
+
           image.addEventListener("error", finish, { once: true });
         }),
     ),
@@ -160,6 +197,70 @@ function BenefitRow({ label, value }: { label: string; value: string }) {
 }
 
 /* ==========================================================
+   DECLARATION POINT
+========================================================== */
+
+function DeclarationPoint({
+  number,
+  icon,
+  title,
+  description,
+}: {
+  number: string;
+  icon: ReactNode;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="border-b border-[#dccb9a] pb-5">
+      <div className="flex items-start gap-4">
+        {/* NUMBER */}
+
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#075e3d] text-[18px] font-extrabold text-white">
+          {number}
+        </div>
+
+        {/* ICON */}
+
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#7f9488] bg-white text-[#075e3d]">
+          {icon}
+        </div>
+
+        {/* CONTENT */}
+
+        <div className="min-w-0 pt-0.5">
+          <h3 className="text-[14px] font-extrabold uppercase leading-tight text-[#174936]">
+            {title}
+          </h3>
+
+          <p className="mt-2 max-w-[500px] text-[10px] leading-relaxed text-[#34483f]">
+            {description}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ==========================================================
+   TRANSACTION DETAIL
+========================================================== */
+
+function TransactionDetail({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-[#d9d3bc] bg-white px-4 py-3">
+      <p className="text-[8px] font-extrabold uppercase tracking-[0.08em] text-[#8b877a]">
+        {label}
+      </p>
+
+      <p className="mt-1 break-words text-[11px] font-extrabold text-[#173f31]">
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
+/* ==========================================================
    VIEWER
 ========================================================== */
 
@@ -169,21 +270,20 @@ export function InvoiceViewer({
   onEdit,
 }: InvoiceViewerProps) {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
   const [copied, setCopied] = useState(false);
 
   const invoiceDocRef = useRef<HTMLDivElement>(null);
 
   /* ========================================================
      PRICING
+     
+     GST IS MANUAL.
+     NO 5% FORMULA.
   ======================================================== */
 
   const basePrice = Number(invoiceData.basePrice) || 0;
 
-  /*
-   * Manual GST amount.
-   *
-   * No percentage formula is used here.
-   */
   const gstAmount = Number(invoiceData.gstAmount) || 0;
 
   const totalAmount = basePrice + gstAmount;
@@ -203,6 +303,21 @@ export function InvoiceViewer({
   const pincode = String(invoiceData.pincode ?? "").trim() || "-";
 
   /* ========================================================
+     TRANSACTION
+  ======================================================== */
+
+  const productName =
+    String(invoiceData.productName ?? "").trim() ||
+    String(invoiceData.planName ?? "").trim() ||
+    "Health Plan";
+
+  const transactionId = String(invoiceData.transactionId ?? "").trim() || "-";
+
+  const transactionDate = formatTransactionDateTime(
+    String(invoiceData.transactionDate ?? ""),
+  );
+
+  /* ========================================================
      PLAN
   ======================================================== */
 
@@ -217,18 +332,11 @@ export function InvoiceViewer({
 
   const validity = String(invoiceData.tenure ?? "").trim() || "1 Year";
 
+  const transactionProductName =
+    family !== "—" ? `${productName} — ${family}` : productName;
+
   /* ========================================================
      PAYMENT STATUS
-
-     This is deliberately normalized so the PDF never shows
-     an empty payment-status pill.
-
-     Supported:
-     - PAID IN FULL
-     - PENDING
-     - PARTIALLY PAID
-     - OVERDUE
-     - CUSTOM
   ======================================================== */
 
   const paymentStatus = (() => {
@@ -245,11 +353,16 @@ export function InvoiceViewer({
 
   /* ========================================================
      CAPTURE ONE A4 PAGE
+
+     Uses html-to-image instead of html2canvas.
+     This avoids html2canvas CSS color parsing issues such as
+     unsupported oklab()/oklch() functions while preserving
+     the existing invoice layout.
   ======================================================== */
 
   const capturePage = async (
     element: HTMLElement,
-    html2canvas: typeof import("html2canvas").default,
+    toCanvas: typeof import("html-to-image").toCanvas,
   ) => {
     await waitForImages(element);
 
@@ -264,40 +377,23 @@ export function InvoiceViewer({
     const previousMinHeight = element.style.minHeight;
 
     /*
-     * Fixed A4 CSS dimensions.
+     * Keep the exact same A4 CSS dimensions used by the invoice.
      */
     element.style.width = "794px";
     element.style.maxWidth = "794px";
     element.style.minWidth = "794px";
-
     element.style.height = "1123px";
     element.style.minHeight = "1123px";
 
     try {
-      return await html2canvas(element, {
-        scale: 2,
-
-        useCORS: true,
-
-        allowTaint: false,
-
-        backgroundColor: "#ffffff",
-
-        logging: false,
-
-        x: 0,
-        y: 0,
-
-        scrollX: 0,
-        scrollY: 0,
-
+      return await toCanvas(element, {
         width: 794,
         height: 1123,
-
-        windowWidth: 794,
-        windowHeight: 1123,
-
-        imageTimeout: 15000,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        cacheBust: true,
+        skipFonts: false,
+        imagePlaceholder: undefined,
       });
     } finally {
       element.style.width = previousWidth;
@@ -311,7 +407,10 @@ export function InvoiceViewer({
   /* ========================================================
      DOWNLOAD PDF
      
-     EXACTLY TWO PAGES
+     EXACTLY THREE PAGES:
+     1. Invoice Details
+     2. Protection + Payment
+     3. Cancellation & Refund Declaration
   ======================================================== */
 
   const handleDownloadPDF = async () => {
@@ -321,14 +420,17 @@ export function InvoiceViewer({
 
     try {
       const page1 = document.getElementById("invoice-page-1");
+
       const page2 = document.getElementById("invoice-page-2");
 
-      if (!page1 || !page2) {
+      const page3 = document.getElementById("invoice-page-3");
+
+      if (!page1 || !page2 || !page3) {
         throw new Error("Invoice pages not found.");
       }
 
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"),
+      const [{ toCanvas }, { jsPDF }] = await Promise.all([
+        import("html-to-image"),
         import("jspdf"),
       ]);
 
@@ -336,13 +438,19 @@ export function InvoiceViewer({
          CAPTURE PAGE 1
       ================================================== */
 
-      const canvas1 = await capturePage(page1, html2canvas);
+      const canvas1 = await capturePage(page1, toCanvas);
 
       /* ==================================================
          CAPTURE PAGE 2
       ================================================== */
 
-      const canvas2 = await capturePage(page2, html2canvas);
+      const canvas2 = await capturePage(page2, toCanvas);
+
+      /* ==================================================
+         CAPTURE PAGE 3
+      ================================================== */
+
+      const canvas3 = await capturePage(page3, toCanvas);
 
       /* ==================================================
          CREATE A4 PDF
@@ -356,11 +464,13 @@ export function InvoiceViewer({
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
+
       const pdfHeight = pdf.internal.pageSize.getHeight();
 
       const margin = 4;
 
       const printableWidth = pdfWidth - margin * 2;
+
       const printableHeight = pdfHeight - margin * 2;
 
       /* ==================================================
@@ -368,19 +478,17 @@ export function InvoiceViewer({
       ================================================== */
 
       const addCanvasToPage = (canvas: HTMLCanvasElement) => {
-        /*
-         * Fit entire page into printable A4 area.
-         * This prevents cropping.
-         */
         const scale = Math.min(
           printableWidth / canvas.width,
           printableHeight / canvas.height,
         );
 
         const imageWidth = canvas.width * scale;
+
         const imageHeight = canvas.height * scale;
 
         const x = (pdfWidth - imageWidth) / 2;
+
         const y = (pdfHeight - imageHeight) / 2;
 
         pdf.addImage(
@@ -396,18 +504,26 @@ export function InvoiceViewer({
       };
 
       /* ==================================================
-         PDF PAGE 1
+         PAGE 1
       ================================================== */
 
       addCanvasToPage(canvas1);
 
       /* ==================================================
-         PDF PAGE 2
+         PAGE 2
       ================================================== */
 
       pdf.addPage();
 
       addCanvasToPage(canvas2);
+
+      /* ==================================================
+         PAGE 3
+      ================================================== */
+
+      pdf.addPage();
+
+      addCanvasToPage(canvas3);
 
       /* ==================================================
          FILE NAME = PHONE NUMBER
@@ -420,9 +536,10 @@ export function InvoiceViewer({
 
       const fileName = `${phoneNumber || "Customer"}-Invoice.pdf`;
 
-      /*
-       * Exactly two PDF pages.
-       */
+      /* ==================================================
+         SAVE
+      ================================================== */
+
       pdf.save(fileName);
 
       /* ==================================================
@@ -431,8 +548,8 @@ export function InvoiceViewer({
 
       try {
         confetti({
-          particleCount: 60,
-          spread: 55,
+          particleCount: 70,
+          spread: 60,
           origin: {
             y: 0.7,
           },
@@ -458,6 +575,8 @@ export function InvoiceViewer({
 ${COMPANY_ADDRESS}
 GSTIN: ${COMPANY_GSTIN}
 CIN: ${COMPANY_CIN}
+Phone: ${COMPANY_PHONE}
+Website: ${COMPANY_WEBSITE}
 
 Invoice No: ${invoiceData.invoiceNumber || "-"}
 Invoice Date: ${invoiceDate}
@@ -469,13 +588,17 @@ City: ${invoiceData.city || "-"}
 State: ${invoiceData.state || "-"}
 Pincode: ${pincode}
 
+Product Name: ${transactionProductName}
+Transaction ID: ${transactionId}
+Transaction Date & Time: ${transactionDate}
+
 Plan: ${planName}
 Family: ${family}
 Description: ${planDescription}
 Validity: ${validity}
 
 Base Price: INR ${formatINR(basePrice)}
-GST (${GST_RATE}%): INR ${formatINR(gstAmount)}
+${GST_LABEL}: INR ${formatINR(gstAmount)}
 Total Payable: INR ${formatINR(totalAmount)}
 
 Payment Status: ${paymentStatus}`;
@@ -496,7 +619,7 @@ Payment Status: ${paymentStatus}`;
   return (
     <div className="min-h-screen bg-[#eef3ef] text-[#17342b]">
       {/* =====================================================
-          VIEWER NAVIGATION
+          TOP NAVIGATION
       ====================================================== */}
 
       <header className="no-print sticky top-0 z-50 border-b border-[#d7e2dc] bg-white/95 backdrop-blur">
@@ -577,13 +700,9 @@ Payment Status: ${paymentStatus}`;
               {/* COMPANY */}
 
               <div className="flex min-w-0 flex-1 items-start gap-5">
-                {/* LOGO */}
-
                 <div className="flex h-[82px] w-[105px] shrink-0 items-center justify-center overflow-visible">
                   <InvoiceLogo className="h-auto w-auto max-h-[82px] max-w-[105px]" />
                 </div>
-
-                {/* COMPANY DETAILS */}
 
                 <div className="min-w-0">
                   <p className="text-[12px] font-bold uppercase tracking-[0.09em] text-[#176746]">
@@ -637,9 +756,7 @@ Payment Status: ${paymentStatus}`;
               </div>
             </div>
 
-            {/* =================================================
-                CUSTOMER
-            ================================================= */}
+            {/* CUSTOMER */}
 
             <div className="mt-6 grid grid-cols-2 border border-[#d8e5db] bg-[#f4faf4] sm:grid-cols-5">
               <InfoCell label="Customer" value={invoiceData.customerName} />
@@ -653,13 +770,11 @@ Payment Status: ${paymentStatus}`;
               <InfoCell label="Pincode" value={pincode} />
             </div>
 
-            {/* =================================================
-                PLAN
-            ================================================= */}
+            {/* PLAN */}
 
             <div className="mt-6 border border-[#b9d9ab] bg-white">
               <div className="grid grid-cols-[65px_1fr_auto] items-center gap-4 p-4 sm:grid-cols-[70px_1fr_auto] sm:p-5">
-                <div className="flex h-14 w-14 items-center justify-center bg-[#edf8e7] text-[11px] font-extrabold text-[#176746]">
+                <div className="flex h-14 w-14 items-center justify-center bg-[#edf8e7] text-[11px] font-extrabold text-[#176e46]">
                   {family}
                 </div>
 
@@ -690,9 +805,7 @@ Payment Status: ${paymentStatus}`;
               </div>
             </div>
 
-            {/* =================================================
-                PLAN FACTS
-            ================================================= */}
+            {/* PLAN FACTS */}
 
             <div className="mt-6 grid grid-cols-2 border border-[#d8e5db]">
               <InfoCell label="Family" value={family} />
@@ -700,9 +813,7 @@ Payment Status: ${paymentStatus}`;
               <InfoCell label="Validity" value={validity} />
             </div>
 
-            {/* =================================================
-                THREE COLUMNS
-            ================================================= */}
+            {/* BENEFITS */}
 
             <div className="mt-7 grid grid-cols-3 gap-3">
               {/* HEALTH */}
@@ -817,7 +928,7 @@ Payment Status: ${paymentStatus}`;
             <div className="absolute bottom-7 left-7 right-7 flex items-center justify-between border-t border-[#e3e9e5] pt-3 text-[8px] text-[#778780] sm:left-10 sm:right-10">
               <span>Continued on page 2</span>
 
-              <span>Page 1 of 2</span>
+              <span>Page 1 of 3</span>
             </div>
           </section>
 
@@ -936,7 +1047,7 @@ Payment Status: ${paymentStatus}`;
                   <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
                     <span className="text-[10px] text-[#81908a]">Email</span>
 
-                    <strong className="max-w-[150px] break-all text-right text-[10px] font-bold leading-tight text-[#264338]">
+                    <strong className="max-w-[175px] break-words text-right text-[10px] font-bold leading-tight text-[#264338]">
                       {email}
                     </strong>
                   </div>
@@ -1015,24 +1126,20 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  {/* PAYMENT STATUS */}
-
                   <div className="grid grid-cols-[1fr_auto] px-5 py-2.5">
                     <span className="text-[10px] text-[#81908a]">
                       Payment Status
                     </span>
 
                     <strong className="max-w-[150px] break-words text-right text-[10px] font-extrabold uppercase leading-tight text-[#176746]">
-                      {paymentStatus || "PAID IN FULL"}
+                      {paymentStatus}
                     </strong>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* =================================================
-                PAYMENT
-            ================================================= */}
+            {/* PAYMENT */}
 
             <div className="mt-7 grid grid-cols-2 gap-8">
               {/* MEMBERSHIP */}
@@ -1057,7 +1164,7 @@ Payment Status: ${paymentStatus}`;
 
                   <div className="mt-1 flex min-h-[30px] min-w-[120px] max-w-full items-center justify-center rounded-full bg-[#edf7ea] px-4 py-1.5">
                     <span className="block whitespace-normal break-words text-center text-[9px] font-extrabold uppercase leading-tight text-[#176746]">
-                      {paymentStatus || "PAID IN FULL"}
+                      {paymentStatus}
                     </span>
                   </div>
                 </div>
@@ -1083,7 +1190,7 @@ Payment Status: ${paymentStatus}`;
 
                   <div className="flex justify-between border-b border-[#e2e9e4] py-2">
                     <span className="text-[10px] text-[#81908a]">
-                      GST ({GST_RATE}%)
+                      {GST_LABEL}
                     </span>
 
                     <strong className="text-[10px] text-[#264338]">
@@ -1104,9 +1211,7 @@ Payment Status: ${paymentStatus}`;
               </div>
             </div>
 
-            {/* =================================================
-                IMPORTANT NOTE
-            ================================================= */}
+            {/* IMPORTANT NOTE */}
 
             <div className="mt-8 border border-[#d0dfd3] bg-[#f5faf5] p-4">
               <h4 className="text-[10px] font-extrabold uppercase tracking-wide text-[#176746]">
@@ -1121,9 +1226,7 @@ Payment Status: ${paymentStatus}`;
               </p>
             </div>
 
-            {/* =================================================
-                COMPANY DETAILS
-            ================================================= */}
+            {/* COMPANY DETAILS */}
 
             <div className="mt-5 text-center">
               <p className="text-[9px] font-semibold uppercase tracking-wider text-[#81908a]">
@@ -1155,7 +1258,197 @@ Payment Status: ${paymentStatus}`;
                   This invoice is system generated. No signature is required.
                 </span>
 
-                <span>Page 2 of 2</span>
+                <span>Page 2 of 3</span>
+              </div>
+            </div>
+          </section>
+
+          {/* =================================================
+              PAGE 3 — DECLARATION
+          ================================================= */}
+
+          <section
+            id="invoice-page-3"
+            className="relative box-border h-[1123px] w-full overflow-visible border-t border-[#e1e8e3] bg-[#fcfbf6] p-7 sm:p-10"
+          >
+            {/* TOP HEADER */}
+
+            <div className="flex items-start justify-between gap-6">
+              {/* LEFT TITLE */}
+
+              <div className="min-w-0 flex-1">
+                <div className="inline-flex items-center rounded-lg bg-[#075e3d] px-6 py-2.5">
+                  <span className="text-[19px] font-extrabold uppercase tracking-wide text-white">
+                    Declaration
+                  </span>
+                </div>
+
+                <div className="mt-4 flex items-center gap-3">
+                  <span className="h-px w-16 bg-[#c9a34d]" />
+
+                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#174936]">
+                    Why Policy Can&apos;t Be Refunded
+                  </p>
+
+                  <span className="h-px w-16 bg-[#c9a34d]" />
+                </div>
+
+                <h1 className="mt-6 text-[31px] font-extrabold leading-[1.05] text-[#174936] sm:text-[36px]">
+                  Cancellation and
+                  <br />
+                  <span className="text-[#c38b16]">Refund Policy</span>
+                </h1>
+
+                <p className="mt-5 max-w-[470px] text-[11px] leading-relaxed text-[#263c34]">
+                  Please read our <strong>cancellation and refund terms</strong>{" "}
+                  carefully before purchasing or activating any policy or
+                  healthcare-related service.
+                </p>
+              </div>
+
+              {/* RIGHT BRAND */}
+
+              <div className="w-[190px] shrink-0 text-center">
+                <InvoiceLogo className="mx-auto h-[105px] w-[125px]" />
+
+                <div className="mt-1">
+                  <p className="font-serif text-[25px] font-bold tracking-wide text-[#174936]">
+                    RESTORE
+                  </p>
+
+                  <p className="mt-1 text-[11px] font-semibold text-[#c38b16]">
+                    Your Partner in Better Health
+                  </p>
+                </div>
+
+                <div className="mt-5 rounded-xl border border-[#70827a] bg-white px-3 py-3 text-left">
+                  <p className="text-[9px] font-semibold text-[#31473e]">
+                    GSTIN :{" "}
+                    <span className="font-bold text-[#174936]">
+                      {COMPANY_GSTIN}
+                    </span>
+                  </p>
+
+                  <p className="mt-2 text-[9px] font-semibold text-[#31473e]">
+                    CIN :{" "}
+                    <span className="font-bold text-[#174936]">
+                      {COMPANY_CIN}
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* DIVIDER */}
+
+            <div className="mt-6 h-px bg-[#d8c595]" />
+
+            {/* DECLARATION POINTS */}
+
+            <div className="mt-7 space-y-5">
+              <DeclarationPoint
+                number="1"
+                icon={<FileText className="h-7 w-7" />}
+                title="No Refund After Policy Issuance"
+                description="After the policy has been issued, the premium amount will not be refunded."
+              />
+
+              <DeclarationPoint
+                number="2"
+                icon={<XCircle className="h-7 w-7" />}
+                title="No Cancellation After Policy Issuance"
+                description="Once the policy has been successfully issued, the policy cannot be cancelled."
+              />
+
+              <DeclarationPoint
+                number="3"
+                icon={<IndianRupee className="h-7 w-7" />}
+                title="Reason for Non-Refund and Non-Cancellation"
+                description="Since the applicable amount is transferred to the respective service partner after the policy is issued, cancellation and refund cannot be processed after issuance."
+              />
+            </div>
+
+            {/* =================================================
+                TRANSACTION DETAILS
+            ================================================= */}
+
+            <div className="mt-7 rounded-xl border border-[#d0c6a5] bg-[#f7f4e9] p-4">
+              <div className="mb-3 flex items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#174936]">
+                    Transaction Details
+                  </h3>
+
+                  <p className="mt-1 text-[8px] text-[#7a786d]">
+                    Transaction information associated with this invoice.
+                  </p>
+                </div>
+
+                <div className="rounded-full bg-[#075e3d] px-3 py-1 text-[8px] font-extrabold uppercase tracking-wide text-white">
+                  Verified Details
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <TransactionDetail
+                  label="Customer Name"
+                  value={invoiceData.customerName || "-"}
+                />
+
+                <TransactionDetail
+                  label="Product Name / Family"
+                  value={transactionProductName}
+                />
+
+                <TransactionDetail
+                  label="Transaction ID"
+                  value={transactionId}
+                />
+
+                <TransactionDetail
+                  label="Transaction Date & Time"
+                  value={transactionDate}
+                />
+              </div>
+            </div>
+
+            {/* CONTACT BAR */}
+
+            <div className="absolute bottom-[72px] left-7 right-7 rounded-xl bg-[#075e3d] px-5 py-4 sm:left-10 sm:right-10">
+              <div className="flex items-center justify-center gap-6 text-white">
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d7a72e] text-[#075e3d]">
+                    <Phone className="h-4 w-4" />
+                  </div>
+
+                  <span className="text-[13px] font-extrabold tracking-wide">
+                    {COMPANY_PHONE}
+                  </span>
+                </div>
+
+                <div className="h-7 w-px bg-white/40" />
+
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d7a72e] text-[#075e3d]">
+                    <Globe className="h-4 w-4" />
+                  </div>
+
+                  <span className="text-[13px] font-extrabold tracking-wide">
+                    {COMPANY_WEBSITE}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* ACKNOWLEDGEMENT */}
+
+            <div className="absolute bottom-7 left-7 right-7 sm:left-10 sm:right-10">
+              <div className="border-t border-[#d5c18c] pt-3 text-center">
+                <p className="mx-auto max-w-[680px] text-[8px] font-medium leading-relaxed text-[#33463d]">
+                  By purchasing or activating a policy or healthcare-related
+                  service, the customer acknowledges and agrees to the above
+                  cancellation and refund terms.
+                </p>
               </div>
             </div>
           </section>

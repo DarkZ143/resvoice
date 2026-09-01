@@ -15,6 +15,9 @@ import {
   CreditCard,
   BadgeIndianRupee,
   MapPinned,
+  Package,
+  Hash,
+  Clock3,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -279,20 +282,22 @@ export function InvoiceGeneratorForm({
   const handleSelectPlan = (plan: (typeof PLAN_OPTIONS)[number]) => {
     const description = getFamilyDescription(plan.family);
 
-    const defaultGSTAmount = (plan.price * GST_RATE) / 100;
-
+    /*
+     * GST amount is manually entered.
+     * Selecting a plan must NOT calculate GST.
+     */
     setBasePriceInput(String(plan.price));
-
-    setGstAmountInput(String(defaultGSTAmount));
+    setGstAmountInput("");
 
     onChange({
       ...invoiceData,
+      productName: `${plan.planName} (${plan.family})`,
       planName: plan.planName,
       family: plan.family,
       planDescription: description,
       basePrice: plan.price,
       gstRate: GST_RATE,
-      gstAmount: defaultGSTAmount,
+      gstAmount: 0,
       tenure: "1 Year",
     });
   };
@@ -305,11 +310,11 @@ export function InvoiceGeneratorForm({
     const defaultFamily = "2A";
 
     setBasePriceInput("");
-
     setGstAmountInput("");
 
     onChange({
       ...invoiceData,
+      productName: `Custom Plan (${defaultFamily})`,
       planName: "Custom Plan",
       family: defaultFamily,
       planDescription: getFamilyDescription(defaultFamily),
@@ -327,10 +332,16 @@ export function InvoiceGeneratorForm({
   const handleFamilyChange = (family: string) => {
     const description = getFamilyDescription(family);
 
+    const updatedProductName =
+      invoiceData.planName === "Custom Plan"
+        ? `Custom Plan (${family})`
+        : invoiceData.productName;
+
     onChange({
       ...invoiceData,
       family,
       planDescription: description,
+      productName: updatedProductName,
     });
   };
 
@@ -689,6 +700,127 @@ export function InvoiceGeneratorForm({
           </section>
 
           {/* =====================================================
+              TRANSACTION DETAILS
+          ====================================================== */}
+
+          <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
+            <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
+              <div className="flex items-center gap-2.5">
+                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf6ea] text-[#176746]">
+                  <CreditCard className="h-4 w-4" />
+                </div>
+
+                <div>
+                  <h2 className="text-base font-bold text-[#18352c]">
+                    Transaction Details
+                  </h2>
+
+                  <p className="text-[10px] text-[#819189]">
+                    Enter the transaction reference and transaction date &amp;
+                    time.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-3 sm:px-6">
+              {/* PRODUCT NAME */}
+
+              <div>
+                <label
+                  htmlFor="product-name-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Product Name
+                </label>
+
+                <div className="relative">
+                  <Package className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                  <input
+                    id="product-name-input"
+                    type="text"
+                    value={
+                      invoiceData.productName ||
+                      (invoiceData.planName
+                        ? `${invoiceData.planName} (${invoiceData.family || "—"})`
+                        : "")
+                    }
+                    readOnly
+                    placeholder="Select a plan first"
+                    className="w-full cursor-not-allowed rounded-xl border border-[#d8e4dc] bg-[#f3f8f4] py-3 pl-10 pr-4 text-sm font-bold text-[#315447] outline-none"
+                  />
+                </div>
+
+                <p className="mt-1.5 text-[9px] text-[#819189]">
+                  Automatically filled from the selected plan/family.
+                </p>
+              </div>
+
+              {/* TRANSACTION ID */}
+
+              <div>
+                <label
+                  htmlFor="transaction-id-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Transaction ID
+                </label>
+
+                <div className="relative">
+                  <Hash className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                  <input
+                    id="transaction-id-input"
+                    required
+                    type="text"
+                    value={invoiceData.transactionId}
+                    onChange={(event) =>
+                      handleInputChange("transactionId", event.target.value)
+                    }
+                    placeholder="Enter transaction ID"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  />
+                </div>
+
+                <p className="mt-1.5 text-[9px] text-[#819189]">
+                  Enter the payment / transaction reference exactly as received.
+                </p>
+              </div>
+
+              {/* TRANSACTION DATE + TIME */}
+
+              <div>
+                <label
+                  htmlFor="transaction-date-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Transaction Date &amp; Time
+                </label>
+
+                <div className="relative">
+                  <Clock3 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                  <input
+                    id="transaction-date-input"
+                    required
+                    type="datetime-local"
+                    value={invoiceData.transactionDate}
+                    onChange={(event) =>
+                      handleInputChange("transactionDate", event.target.value)
+                    }
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  />
+                </div>
+
+                <p className="mt-1.5 text-[9px] text-[#819189]">
+                  Select the exact date and time of the transaction.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* =====================================================
               CUSTOMER DETAILS
           ====================================================== */}
 
@@ -967,10 +1099,6 @@ export function InvoiceGeneratorForm({
               {PLAN_OPTIONS.map((plan) => {
                 const isSelected = selectedPlan?.id === plan.id;
 
-                const gst = (plan.price * GST_RATE) / 100;
-
-                const total = plan.price + gst;
-
                 return (
                   <button
                     key={plan.id}
@@ -1042,11 +1170,11 @@ export function InvoiceGeneratorForm({
                         </p>
 
                         <p className="text-[8px] font-semibold text-[#7c8d86]">
-                          + GST (5%)
+                          GST 5% · Enter amount below
                         </p>
 
                         <p className="mt-0.5 text-[8px] font-bold text-[#597269]">
-                          ₹{formatINR(total)} total
+                          GST is entered manually
                         </p>
                       </div>
 
@@ -1088,7 +1216,8 @@ export function InvoiceGeneratorForm({
                     </div>
 
                     <p className="mt-0.5 text-xs font-medium text-[#587067]">
-                      Choose family, validity, base price and GST amount.
+                      Choose family, validity, base price and manually entered
+                      GST amount.
                     </p>
                   </div>
 
