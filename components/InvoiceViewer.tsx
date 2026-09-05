@@ -804,6 +804,16 @@ Payment Status: ${paymentStatus}`;
                 </div>
               </div>
             </div>
+            {/* =================================================
+    POLICY VALIDITY ALERT
+================================================= */}
+
+            <div className="mt-5 rounded-lg border border-[#efb0b0] bg-[#fff5f5] px-4 py-2.5">
+              <p className="text-[10px] font-extrabold tracking-wide text-[#c62828]">
+                This policy is valid only for{" "}
+                <span className="uppercase">{validity}</span>.
+              </p>
+            </div>
 
             {/* PLAN FACTS */}
 
