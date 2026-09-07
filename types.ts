@@ -22,9 +22,10 @@ export interface InvoiceData {
   // Transaction
   // =========================================================
 
-  /*
+  /**
    * Product selected for this transaction.
-   * Example:
+   *
+   * Examples:
    * 1A
    * 2A
    * 2A + 2C
@@ -32,12 +33,12 @@ export interface InvoiceData {
    */
   productName: string;
 
-  /*
+  /**
    * Transaction / payment reference ID.
    */
   transactionId: string;
 
-  /*
+  /**
    * Transaction date and time.
    * Stored as a datetime-local compatible string.
    */
@@ -67,18 +68,38 @@ export interface InvoiceData {
   // Pricing
   // =========================================================
 
+  /**
+   * Base price entered manually.
+   *
+   * Decimal values are supported.
+   * Examples: 70000, 70000.50
+   */
   basePrice: number;
 
-  /*
+  /**
    * GST is displayed as a fixed/reference rate of 5%.
-   * GST amount is NOT calculated automatically.
+   *
+   * GST amount is entered manually.
+   * It is NOT calculated automatically.
    */
   gstRate: number;
 
-  /*
-   * Actual GST amount entered manually by admin.
+  /**
+   * Actual GST amount entered manually.
+   *
+   * Decimal values are supported.
    */
   gstAmount: number;
+
+  /**
+   * Final payable amount entered manually.
+   *
+   * IMPORTANT:
+   * This is NOT calculated from basePrice + gstAmount.
+   *
+   * Decimal values are supported.
+   */
+  totalAmount: number;
 
   currency: string;
 
@@ -86,7 +107,7 @@ export interface InvoiceData {
   // Payment
   // =========================================================
 
-  /*
+  /**
    * Supported values:
    * PAID IN FULL
    * PENDING
@@ -96,7 +117,7 @@ export interface InvoiceData {
    */
   paymentStatus: string;
 
-  /*
+  /**
    * Used only when paymentStatus === "CUSTOM".
    */
   customPaymentStatus: string;

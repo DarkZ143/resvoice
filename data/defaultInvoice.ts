@@ -14,7 +14,7 @@ export const initialInvoiceData: InvoiceData = {
   // TRANSACTION DETAILS
   // =====================================================
 
-  /*
+  /**
    * Product selected for the transaction.
    *
    * Examples:
@@ -25,12 +25,12 @@ export const initialInvoiceData: InvoiceData = {
    */
   productName: "",
 
-  /*
+  /**
    * Payment / transaction reference ID.
    */
   transactionId: "",
 
-  /*
+  /**
    * yyyy-mm-ddTHH:mm format for HTML datetime-local input.
    */
   transactionDate: "",
@@ -59,12 +59,22 @@ export const initialInvoiceData: InvoiceData = {
   // PRICING
   //
   // GST rate is fixed/reference at 5%.
-  // Actual GST amount is entered manually by admin.
+  // GST amount is entered manually by admin.
+  // Final payable amount is ALSO entered manually.
+  //
+  // There is NO automatic calculation between
+  // Base Price, GST Amount and Total Payable.
   // =====================================================
 
   basePrice: 0,
+
   gstRate: 5,
+
   gstAmount: 0,
+
+  // Final payable amount entered manually by admin.
+  totalAmount: 0,
+
   currency: "₹",
 
   // =====================================================
@@ -72,6 +82,7 @@ export const initialInvoiceData: InvoiceData = {
   // =====================================================
 
   paymentStatus: "PAID IN FULL",
+
   customPaymentStatus: "",
 
   // =====================================================
