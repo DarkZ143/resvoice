@@ -67,7 +67,8 @@ const FAMILY_DESCRIPTIONS: Record<string, string> = {
 
 const formatINR = (value: number) =>
   value.toLocaleString("en-IN", {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   });
 
 const formatInvoiceDate = (value: string) => {
@@ -286,7 +287,7 @@ export function InvoiceViewer({
 
   const gstAmount = Number(invoiceData.gstAmount) || 0;
 
-  const totalAmount = basePrice + gstAmount;
+  const totalAmount = Number(invoiceData.totalAmount) || 0;
 
   /* ========================================================
      INVOICE

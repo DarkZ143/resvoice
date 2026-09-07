@@ -167,7 +167,8 @@ const PAYMENT_STATUS_OPTIONS = [
 
 const formatINR = (value: number) =>
   value.toLocaleString("en-IN", {
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
   });
 
 const getFamilyDescription = (family: string) => {
@@ -214,6 +215,14 @@ export function InvoiceGeneratorForm({
   );
 
   /* =======================================================
+     FINAL AMOUNT INPUT
+  ======================================================== */
+
+  const [finalAmountInput, setFinalAmountInput] = useState(
+    invoiceData.totalAmount > 0 ? String(invoiceData.totalAmount) : "",
+  );
+
+  /* =======================================================
      SYNC BASE PRICE
   ======================================================== */
 
@@ -234,14 +243,27 @@ export function InvoiceGeneratorForm({
   }, [invoiceData.gstAmount]);
 
   /* =======================================================
+     SYNC FINAL AMOUNT
+  ======================================================== */
+
+  useEffect(() => {
+    setFinalAmountInput(
+      invoiceData.totalAmount > 0 ? String(invoiceData.totalAmount) : "",
+    );
+  }, [invoiceData.totalAmount]);
+
+  /* =======================================================
      PRICING
+
+     Base Price, GST Amount and Final Amount are ALL
+     manually entered. There is NO automatic addition.
   ======================================================== */
 
   const basePrice = Number(invoiceData.basePrice) || 0;
 
   const gstAmount = Number(invoiceData.gstAmount) || 0;
 
-  const totalAmount = basePrice + gstAmount;
+  const totalAmount = Number(invoiceData.totalAmount) || 0;
 
   /* =======================================================
      SELECTED PLAN
@@ -288,6 +310,7 @@ export function InvoiceGeneratorForm({
      */
     setBasePriceInput(String(plan.price));
     setGstAmountInput("");
+    setFinalAmountInput("");
 
     onChange({
       ...invoiceData,
@@ -298,6 +321,7 @@ export function InvoiceGeneratorForm({
       basePrice: plan.price,
       gstRate: GST_RATE,
       gstAmount: 0,
+      totalAmount: 0,
       tenure: "1 Year",
     });
   };
@@ -311,6 +335,7 @@ export function InvoiceGeneratorForm({
 
     setBasePriceInput("");
     setGstAmountInput("");
+    setFinalAmountInput("");
 
     onChange({
       ...invoiceData,
@@ -321,6 +346,7 @@ export function InvoiceGeneratorForm({
       basePrice: 0,
       gstRate: GST_RATE,
       gstAmount: 0,
+      totalAmount: 0,
       tenure: "1 Year",
     });
   };
@@ -364,13 +390,16 @@ export function InvoiceGeneratorForm({
   ======================================================== */
 
   const handleBasePriceChange = (value: string) => {
-    const numericValue = value.replace(/\D/g, "");
+    const numericValue = value
+      .replace(/[^0-9.]/g, "")
+      .replace(/(\..*)\./g, "$1");
 
     setBasePriceInput(numericValue);
 
     onChange({
       ...invoiceData,
-      basePrice: numericValue === "" ? 0 : Number(numericValue),
+      basePrice:
+        numericValue === "" || numericValue === "." ? 0 : Number(numericValue),
     });
   };
 
@@ -380,13 +409,36 @@ export function InvoiceGeneratorForm({
   ======================================================== */
 
   const handleGSTAmountChange = (value: string) => {
-    const numericValue = value.replace(/\D/g, "");
+    const numericValue = value
+      .replace(/[^0-9.]/g, "")
+      .replace(/(\..*)\./g, "$1");
 
     setGstAmountInput(numericValue);
 
     onChange({
       ...invoiceData,
-      gstAmount: numericValue === "" ? 0 : Number(numericValue),
+      gstAmount:
+        numericValue === "" || numericValue === "." ? 0 : Number(numericValue),
+    });
+  };
+
+  /* =======================================================
+     FINAL AMOUNT
+     NUMBERS ONLY
+     NO AUTOMATIC CALCULATION
+  ======================================================== */
+
+  const handleFinalAmountChange = (value: string) => {
+    const numericValue = value
+      .replace(/[^0-9.]/g, "")
+      .replace(/(\..*)\./g, "$1");
+
+    setFinalAmountInput(numericValue);
+
+    onChange({
+      ...invoiceData,
+      totalAmount:
+        numericValue === "" || numericValue === "." ? 0 : Number(numericValue),
     });
   };
 
@@ -414,6 +466,11 @@ export function InvoiceGeneratorForm({
 
     if (pincode && pincode.length !== 6) {
       window.alert("Please enter a valid 6-digit pincode.");
+      return;
+    }
+
+    if (invoiceData.totalAmount <= 0) {
+      window.alert("Please enter the final payable amount.");
       return;
     }
 
@@ -1039,7 +1096,15 @@ export function InvoiceGeneratorForm({
                           return;
                         }
 
-                        if (!/^\d$/.test(event.key)) {
+                        if (!/^\d$/.test(event.key) && event.key !== ".") {
+                          event.preventDefault();
+                          return;
+                        }
+
+                        if (
+                          event.key === "." &&
+                          event.currentTarget.value.includes(".")
+                        ) {
                           event.preventDefault();
                         }
                       }}
@@ -1372,7 +1437,15 @@ export function InvoiceGeneratorForm({
                           return;
                         }
 
-                        if (!/^\d$/.test(event.key)) {
+                        if (!/^\d$/.test(event.key) && event.key !== ".") {
+                          event.preventDefault();
+                          return;
+                        }
+
+                        if (
+                          event.key === "." &&
+                          event.currentTarget.value.includes(".")
+                        ) {
                           event.preventDefault();
                         }
                       }}
@@ -1389,7 +1462,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <p className="mt-1.5 text-[9px] text-[#819189]">
-                    Numbers only.
+                    Numbers only. Decimals allowed.
                   </p>
                 </div>
               </div>
@@ -1502,19 +1575,68 @@ export function InvoiceGeneratorForm({
                   </span>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <div>
-                    <p className="text-sm font-extrabold uppercase text-[#176746]">
-                      Total Payable
-                    </p>
+                <div className="border-t border-[#e3ebe6] pt-4">
+                  <label
+                    htmlFor="total-payable-input"
+                    className="mb-1.5 block text-sm font-extrabold uppercase text-[#176746]"
+                  >
+                    Total Payable
+                  </label>
 
-                    <p className="mt-0.5 text-[9px] text-[#7b8d85]">
-                      Base Price + GST Amount
-                    </p>
+                  <div className="relative">
+                    <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-2xl font-extrabold text-[#667c73]">
+                      ₹
+                    </span>
+
+                    <input
+                      id="total-payable-input"
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      required
+                      value={finalAmountInput}
+                      onChange={(event) =>
+                        handleFinalAmountChange(event.target.value)
+                      }
+                      onKeyDown={(event) => {
+                        const allowedKeys = [
+                          "Backspace",
+                          "Delete",
+                          "Tab",
+                          "ArrowLeft",
+                          "ArrowRight",
+                          "Home",
+                          "End",
+                        ];
+
+                        if (allowedKeys.includes(event.key)) return;
+
+                        if (!/^\d$/.test(event.key) && event.key !== ".") {
+                          event.preventDefault();
+                          return;
+                        }
+
+                        if (
+                          event.key === "." &&
+                          event.currentTarget.value.includes(".")
+                        ) {
+                          event.preventDefault();
+                        }
+                      }}
+                      onPaste={(event) => {
+                        event.preventDefault();
+                        handleFinalAmountChange(
+                          event.clipboardData.getData("text"),
+                        );
+                      }}
+                      placeholder="Enter total payable amount"
+                      className="w-full rounded-xl border-2 border-[#b7d4c0] bg-[#f4fbf5] py-3 pl-10 pr-4 text-xl font-extrabold text-[#075e3d] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    />
                   </div>
 
-                  <p className="text-2xl font-extrabold text-[#075e3d]">
-                    ₹{formatINR(totalAmount)}
+                  <p className="mt-1.5 text-[9px] text-[#819189]">
+                    Enter the exact final amount. No addition or automatic
+                    calculation.
                   </p>
                 </div>
               </div>
@@ -1623,11 +1745,11 @@ export function InvoiceGeneratorForm({
                 </p>
 
                 <p className="mt-0.5 text-[10px] text-[#6f8179]">
-                  Total payable:{" "}
+                  Final amount:{" "}
                   <strong className="text-[#176746]">
                     ₹{formatINR(totalAmount)}
                   </strong>{" "}
-                  including entered GST
+                  entered manually
                 </p>
               </div>
 
