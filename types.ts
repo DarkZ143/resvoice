@@ -1,12 +1,20 @@
 export interface BenefitItem {
   id: string;
+
   title: string;
+
   category: string;
+
   badgeText: string;
+
   shortDesc: string;
+
   details: string[];
+
   imageUrl?: string;
+
   iconName: string;
+
   included: boolean;
 }
 
@@ -16,6 +24,7 @@ export interface InvoiceData {
   // =========================================================
 
   invoiceNumber: string;
+
   issueDate: string;
 
   // =========================================================
@@ -49,10 +58,15 @@ export interface InvoiceData {
   // =========================================================
 
   customerName: string;
+
   phoneNumber: string;
+
   email: string;
+
   city: string;
+
   state: string;
+
   pincode: string;
 
   // =========================================================
@@ -60,8 +74,11 @@ export interface InvoiceData {
   // =========================================================
 
   planName: string;
+
   planDescription: string;
+
   family: string;
+
   tenure: string;
 
   // =========================================================
@@ -127,10 +144,15 @@ export interface InvoiceData {
   // =========================================================
 
   companyName: string;
+
   companyAddress: string;
+
   companyGstin: string;
+
   companyCin: string;
+
   companySupportPhone: string;
+
   companyWebsite: string;
 
   // =========================================================
