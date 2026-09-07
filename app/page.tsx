@@ -33,7 +33,7 @@ export default function Home() {
         });
       }
     } catch (error) {
-      console.warn("Failed to load saved invoice:", error);
+      console.warn("Failed to load saved invoices:", error);
     } finally {
       setIsHydrated(true);
     }
