@@ -1,22 +1,39 @@
 export interface BenefitItem {
   id: string;
-
   title: string;
-
   category: string;
-
   badgeText: string;
-
   shortDesc: string;
-
   details: string[];
-
   imageUrl?: string;
-
   iconName: string;
-
   included: boolean;
 }
+
+/* =========================================================
+   TRANSACTION
+========================================================= */
+
+export interface InvoiceTransaction {
+  /**
+   * Payment / transaction reference ID.
+   */
+  transactionId: string;
+
+  /**
+   * Transaction date and time.
+   *
+   * Expected format:
+   * yyyy-mm-ddTHH:mm
+   *
+   * Compatible with HTML datetime-local input.
+   */
+  transactionDate: string;
+}
+
+/* =========================================================
+   INVOICE DATA
+========================================================= */
 
 export interface InvoiceData {
   // =========================================================
@@ -25,6 +42,12 @@ export interface InvoiceData {
 
   invoiceNumber: string;
 
+  /**
+   * Invoice issue date.
+   *
+   * Expected format:
+   * yyyy-mm-dd
+   */
   issueDate: string;
 
   // =========================================================
@@ -43,15 +66,33 @@ export interface InvoiceData {
   productName: string;
 
   /**
-   * Transaction / payment reference ID.
+   * Legacy / primary transaction ID.
+   *
+   * Kept for backward compatibility with older invoices.
+   *
+   * For current invoices, use `transactions`.
    */
   transactionId: string;
 
   /**
-   * Transaction date and time.
-   * Stored as a datetime-local compatible string.
+   * Legacy / primary transaction date and time.
+   *
+   * Kept for backward compatibility with older invoices.
+   *
+   * For current invoices, use `transactions`.
    */
   transactionDate: string;
+
+  /**
+   * Payment transactions for the invoice.
+   *
+   * Maximum supported: 3 transactions.
+   *
+   * Each transaction contains its own:
+   * - Transaction ID
+   * - Transaction Date & Time
+   */
+  transactions: InvoiceTransaction[];
 
   // =========================================================
   // Customer
@@ -89,7 +130,11 @@ export interface InvoiceData {
    * Base price entered manually.
    *
    * Decimal values are supported.
-   * Examples: 70000, 70000.50
+   *
+   * Examples:
+   * 70000
+   * 70000.50
+   * 3125.75
    */
   basePrice: number;
 
@@ -97,7 +142,8 @@ export interface InvoiceData {
    * GST is displayed as a fixed/reference rate of 5%.
    *
    * GST amount is entered manually.
-   * It is NOT calculated automatically.
+   *
+   * It is NOT calculated automatically from basePrice.
    */
   gstRate: number;
 
@@ -105,6 +151,10 @@ export interface InvoiceData {
    * Actual GST amount entered manually.
    *
    * Decimal values are supported.
+   *
+   * Example:
+   * 3500
+   * 3500.50
    */
   gstAmount: number;
 
@@ -112,7 +162,12 @@ export interface InvoiceData {
    * Final payable amount entered manually.
    *
    * IMPORTANT:
-   * This is NOT calculated from basePrice + gstAmount.
+   *
+   * This value is NOT calculated from:
+   *
+   * basePrice + gstAmount
+   *
+   * The invoice maker enters the final amount directly.
    *
    * Decimal values are supported.
    */
@@ -121,11 +176,12 @@ export interface InvoiceData {
   currency: string;
 
   // =========================================================
-  // Payment
+  // Payment Status
   // =========================================================
 
   /**
    * Supported values:
+   *
    * PAID IN FULL
    * PENDING
    * PARTIALLY PAID
@@ -135,6 +191,8 @@ export interface InvoiceData {
   paymentStatus: string;
 
   /**
+   * Custom payment status text.
+   *
    * Used only when paymentStatus === "CUSTOM".
    */
   customPaymentStatus: string;

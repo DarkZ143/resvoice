@@ -223,6 +223,74 @@ export function InvoiceGeneratorForm({
   );
 
   /* =======================================================
+     MULTIPLE TRANSACTIONS
+
+     A customer can pay in any number of separate pieces.
+     There is deliberately NO hard-coded maximum.
+  ======================================================== */
+
+  type TransactionEntry = {
+    transactionId: string;
+    transactionDate: string;
+  };
+
+  const currentTransactions: TransactionEntry[] =
+    invoiceData.transactions ?? [];
+
+  const [transactions, setTransactions] =
+    useState<TransactionEntry[]>(currentTransactions);
+
+  useEffect(() => {
+    setTransactions(invoiceData.transactions ?? []);
+  }, [invoiceData.transactions]);
+
+  const updateTransactions = (nextTransactions: TransactionEntry[]) => {
+    setTransactions(nextTransactions);
+
+    onChange({
+      ...invoiceData,
+      transactions: nextTransactions,
+      // Keep legacy fields synchronized with the first transaction.
+      transactionId: nextTransactions[0]?.transactionId ?? "",
+      transactionDate: nextTransactions[0]?.transactionDate ?? "",
+    });
+  };
+
+  const handleAddTransaction = () => {
+    updateTransactions([
+      ...transactions,
+      {
+        transactionId: "",
+        transactionDate: "",
+      },
+    ]);
+  };
+
+  const handleTransactionChange = (
+    index: number,
+    field: "transactionId" | "transactionDate",
+    value: string,
+  ) => {
+    const nextTransactions = transactions.map(
+      (transaction, transactionIndex) =>
+        transactionIndex === index
+          ? {
+              ...transaction,
+              [field]: value,
+            }
+          : transaction,
+    );
+
+    updateTransactions(nextTransactions);
+  };
+
+  const handleRemoveTransaction = (index: number) => {
+    updateTransactions(
+      transactions.filter((_, transactionIndex) => transactionIndex !== index),
+    );
+  };
+
+  /* =======================================================
      SYNC BASE PRICE
   ======================================================== */
 
@@ -471,6 +539,19 @@ export function InvoiceGeneratorForm({
 
     if (invoiceData.totalAmount <= 0) {
       window.alert("Please enter the final payable amount.");
+      return;
+    }
+
+    if (
+      transactions.length === 0 ||
+      transactions.some(
+        (transaction) =>
+          !transaction.transactionId.trim() || !transaction.transactionDate,
+      )
+    ) {
+      window.alert(
+        "Please add at least one complete transaction with ID and date/time.",
+      );
       return;
     }
 
@@ -762,25 +843,38 @@ export function InvoiceGeneratorForm({
 
           <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
             <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf6ea] text-[#176746]">
-                  <CreditCard className="h-4 w-4" />
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#edf6ea] text-[#176746]">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-base font-bold text-[#18352c]">
+                      Transaction Details
+                    </h2>
+
+                    <p className="text-[10px] text-[#819189]">
+                      Add as many separate payment transactions as needed. No
+                      fixed limit.
+                    </p>
+                  </div>
                 </div>
 
-                <div>
-                  <h2 className="text-base font-bold text-[#18352c]">
-                    Transaction Details
-                  </h2>
-
-                  <p className="text-[10px] text-[#819189]">
-                    Enter the transaction reference and transaction date &amp;
-                    time.
-                  </p>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleAddTransaction}
+                  disabled={transactions.length >= 3}
+                  className="inline-flex items-center justify-center rounded-xl bg-[#075e3d] px-4 py-2.5 text-xs font-extrabold text-white transition hover:bg-[#064f34] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {transactions.length >= 3
+                    ? "Maximum 3 Transactions"
+                    : "+ Add Transaction"}
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 px-5 py-5 sm:grid-cols-3 sm:px-6">
+            <div className="space-y-4 px-5 py-5 sm:px-6">
               {/* PRODUCT NAME */}
 
               <div>
@@ -814,66 +908,128 @@ export function InvoiceGeneratorForm({
                 </p>
               </div>
 
-              {/* TRANSACTION ID */}
+              {/* TRANSACTIONS */}
 
-              <div>
-                <label
-                  htmlFor="transaction-id-input"
-                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
-                >
-                  Transaction ID
-                </label>
+              <div className="space-y-3">
+                {transactions.length === 0 ? (
+                  <div className="rounded-xl border border-dashed border-[#b9ccc1] bg-[#f8fbf9] px-4 py-5 text-center">
+                    <p className="text-sm font-semibold text-[#315447]">
+                      No payment transaction added yet.
+                    </p>
 
-                <div className="relative">
-                  <Hash className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+                    <p className="mt-1 text-[10px] text-[#819189]">
+                      Click &quot;Add Transaction&quot; for every separate
+                      payment piece.
+                    </p>
+                  </div>
+                ) : (
+                  transactions.map((transaction, index) => (
+                    <div
+                      key={`transaction-${index}`}
+                      className="rounded-xl border border-[#d8e4dc] bg-[#fbfdfb] p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#74877e]">
+                            Payment Piece {index + 1}
+                          </p>
 
-                  <input
-                    id="transaction-id-input"
-                    required
-                    type="text"
-                    value={invoiceData.transactionId}
-                    onChange={(event) =>
-                      handleInputChange("transactionId", event.target.value)
-                    }
-                    placeholder="Enter transaction ID"
-                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
-                  />
-                </div>
+                          <p className="mt-0.5 text-[9px] text-[#819189]">
+                            Transaction ID and exact transaction date &amp;
+                            time.
+                          </p>
+                        </div>
 
-                <p className="mt-1.5 text-[9px] text-[#819189]">
-                  Enter the payment / transaction reference exactly as received.
-                </p>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTransaction(index)}
+                          className="rounded-lg border border-[#efc8c8] bg-[#fff7f7] px-3 py-1.5 text-[9px] font-extrabold text-[#a33a3a] transition hover:bg-[#fff0f0]"
+                        >
+                          Remove
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div>
+                          <label
+                            htmlFor={`transaction-id-input-${index}`}
+                            className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                          >
+                            Transaction ID
+                          </label>
+
+                          <div className="relative">
+                            <Hash className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                            <input
+                              id={`transaction-id-input-${index}`}
+                              required
+                              type="text"
+                              value={transaction.transactionId}
+                              onChange={(event) =>
+                                handleTransactionChange(
+                                  index,
+                                  "transactionId",
+                                  event.target.value,
+                                )
+                              }
+                              placeholder="Enter transaction ID"
+                              className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label
+                            htmlFor={`transaction-date-input-${index}`}
+                            className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                          >
+                            Transaction Date &amp; Time
+                          </label>
+
+                          <div className="relative">
+                            <Clock3 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                            <input
+                              id={`transaction-date-input-${index}`}
+                              required
+                              type="datetime-local"
+                              value={transaction.transactionDate}
+                              onChange={(event) =>
+                                handleTransactionChange(
+                                  index,
+                                  "transactionDate",
+                                  event.target.value,
+                                )
+                              }
+                              className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
 
-              {/* TRANSACTION DATE + TIME */}
+              {transactions.length > 0 && (
+                <div className="rounded-xl border border-[#d4e5d9] bg-[#f4faf4] px-4 py-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#74877e]">
+                      Payment Pieces
+                    </span>
 
-              <div>
-                <label
-                  htmlFor="transaction-date-input"
-                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
-                >
-                  Transaction Date &amp; Time
-                </label>
+                    <span className="text-sm font-extrabold text-[#176746]">
+                      {transactions.length}
+                    </span>
+                  </div>
 
-                <div className="relative">
-                  <Clock3 className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
-
-                  <input
-                    id="transaction-date-input"
-                    required
-                    type="datetime-local"
-                    value={invoiceData.transactionDate}
-                    onChange={(event) =>
-                      handleInputChange("transactionDate", event.target.value)
-                    }
-                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
-                  />
+                  <p className="mt-1 text-[9px] text-[#819189]">
+                    Add or remove transactions as required. No predefined
+                    maximum is enforced.
+                  </p>
                 </div>
-
-                <p className="mt-1.5 text-[9px] text-[#819189]">
-                  Select the exact date and time of the transaction.
-                </p>
-              </div>
+              )}
             </div>
           </section>
 
@@ -1096,15 +1252,7 @@ export function InvoiceGeneratorForm({
                           return;
                         }
 
-                        if (!/^\d$/.test(event.key) && event.key !== ".") {
-                          event.preventDefault();
-                          return;
-                        }
-
-                        if (
-                          event.key === "." &&
-                          event.currentTarget.value.includes(".")
-                        ) {
+                        if (!/^\d$/.test(event.key)) {
                           event.preventDefault();
                         }
                       }}

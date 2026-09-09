@@ -35,6 +35,13 @@ export const initialInvoiceData: InvoiceData = {
    */
   transactionDate: "",
 
+  /**
+   * Multiple payment transactions.
+   *
+   * Maximum supported by the form: 3.
+   */
+  transactions: [],
+
   // =====================================================
   // CUSTOMER DETAILS
   // =====================================================

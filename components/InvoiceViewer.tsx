@@ -312,11 +312,42 @@ export function InvoiceViewer({
     String(invoiceData.planName ?? "").trim() ||
     "Health Plan";
 
-  const transactionId = String(invoiceData.transactionId ?? "").trim() || "-";
+  const transactions = (() => {
+    if (Array.isArray(invoiceData.transactions)) {
+      return invoiceData.transactions
+        .map((transaction) => ({
+          transactionId: String(transaction.transactionId ?? "").trim(),
+          transactionDate: String(transaction.transactionDate ?? "").trim(),
+        }))
+        .filter(
+          (transaction) =>
+            transaction.transactionId || transaction.transactionDate,
+        );
+    }
 
-  const transactionDate = formatTransactionDateTime(
-    String(invoiceData.transactionDate ?? ""),
-  );
+    const legacyId = String(invoiceData.transactionId ?? "").trim();
+    const legacyDate = String(invoiceData.transactionDate ?? "").trim();
+
+    return legacyId || legacyDate
+      ? [
+          {
+            transactionId: legacyId,
+            transactionDate: legacyDate,
+          },
+        ]
+      : [];
+  })();
+
+  const limitedTransactions = transactions.slice(0, 3);
+
+  const displayTransactions = limitedTransactions.length
+    ? limitedTransactions
+    : [
+        {
+          transactionId: "-",
+          transactionDate: "",
+        },
+      ];
 
   /* ========================================================
      PLAN
@@ -590,8 +621,15 @@ State: ${invoiceData.state || "-"}
 Pincode: ${pincode}
 
 Product Name: ${transactionProductName}
-Transaction ID: ${transactionId}
-Transaction Date & Time: ${transactionDate}
+Transaction ID(s):
+${displayTransactions
+  .map(
+    (transaction, index) =>
+      `${index + 1}. ${transaction.transactionId || "-"} — ${formatTransactionDateTime(
+        transaction.transactionDate,
+      )}`,
+  )
+  .join("\n")}
 
 Plan: ${planName}
 Family: ${family}
@@ -1400,7 +1438,7 @@ Payment Status: ${paymentStatus}`;
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <TransactionDetail
                   label="Customer Name"
                   value={invoiceData.customerName || "-"}
@@ -1410,16 +1448,37 @@ Payment Status: ${paymentStatus}`;
                   label="Product Name / Family"
                   value={transactionProductName}
                 />
+              </div>
 
-                <TransactionDetail
-                  label="Transaction ID"
-                  value={transactionId}
-                />
+              <div className="mt-3 rounded-lg border border-[#d9d3bc] bg-white px-4 py-3">
+                <p className="text-[8px] font-extrabold uppercase tracking-[0.08em] text-[#8b877a]">
+                  Transaction ID(s) &amp; Date/Time
+                </p>
 
-                <TransactionDetail
-                  label="Transaction Date & Time"
-                  value={transactionDate}
-                />
+                <div className="mt-2 space-y-2">
+                  {displayTransactions.map((transaction, index) => (
+                    <div
+                      key={`transaction-detail-${index}`}
+                      className="flex flex-col gap-1 rounded-md bg-[#f8f7f1] px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                    >
+                      <span className="text-[8px] font-extrabold uppercase tracking-wide text-[#8b877a]">
+                        Payment {index + 1}
+                      </span>
+
+                      <div className="min-w-0 sm:text-right">
+                        <p className="break-all text-[11px] font-extrabold text-[#173f31]">
+                          {transaction.transactionId || "-"}
+                        </p>
+
+                        <p className="mt-0.5 text-[9px] font-semibold text-[#6f7b73]">
+                          {formatTransactionDateTime(
+                            transaction.transactionDate,
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 
