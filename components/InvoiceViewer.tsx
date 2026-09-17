@@ -786,7 +786,7 @@ Payment Status: ${paymentStatus}`;
                 </p>
 
                 <p className="mt-4 text-[9px] font-bold uppercase tracking-wide text-[#8a9a93]">
-                  Date
+                  Date of Issue of Policy
                 </p>
 
                 <p className="mt-1 text-[12px] font-extrabold text-[#18352c]">
@@ -850,7 +850,8 @@ Payment Status: ${paymentStatus}`;
             <div className="mt-5 rounded-lg border border-[#efb0b0] bg-[#fff5f5] px-4 py-2.5">
               <p className="text-[10px] font-extrabold tracking-wide text-[#c62828]">
                 This policy is valid only for{" "}
-                <span className="uppercase">{validity}</span>.
+                <span className="uppercase">{validity}</span>,
+                You will need to renew the plan after the validity period ends to continue enjoying the benefits.
               </p>
             </div>
 
@@ -948,27 +949,6 @@ Payment Status: ${paymentStatus}`;
                   label="Online Fitness and Zumba Session"
                   value="Yes"
                 />
-
-                <div className="grid grid-cols-[1fr_auto] gap-3 bg-[#eefaf1] px-3 py-3">
-                  <div className="text-[10px] font-semibold leading-relaxed text-[#233e34]">
-                    Personal Accident Covered -
-                    <br />5 Lacs
-                  </div>
-
-                  <div className="text-[10px] font-bold text-[#146746]">
-                    Yes
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-[1fr_auto] gap-3 bg-[#eefaf1] px-3 py-3">
-                  <div className="text-[10px] font-semibold text-[#233e34]">
-                    Hospicash
-                  </div>
-
-                  <div className="text-[10px] font-bold text-[#146746]">
-                    Yes
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -987,14 +967,14 @@ Payment Status: ${paymentStatus}`;
 
           <section
             id="invoice-page-2"
-            className="relative box-border h-[1123px] w-full overflow-visible border-t border-[#e1e8e3] bg-white p-7 sm:p-10"
+            className="relative box-border h-[1123px] w-full overflow-hidden border-t border-[#e1e8e3] bg-white p-6 sm:p-8"
           >
             {/* PAGE HEADER */}
 
             <div className="flex items-center justify-between border-b border-[#dce7df] pb-4">
               <div>
                 <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#176746]">
-                  Protection Benefits
+                  Benefits
                 </h2>
 
                 <p className="mt-1 text-[8px] font-semibold text-[#87958f]">
@@ -1019,52 +999,86 @@ Payment Status: ${paymentStatus}`;
               </div>
             </div>
 
-            {/* HOSPICASH */}
+            {/* Benefits */}
 
-            <div className="mt-6 border border-[#aeca9b]">
-              <div className="bg-[#075e3d] px-4 py-3 text-[11px] font-extrabold text-white">
-                INCLUDING PROTECTION BENEFIT
-                <span className="mx-2 opacity-50">|</span>
-                Hospicash Benefit
+            <div className="mt-6 overflow-hidden border border-[#aeca9b]">
+              <div className="bg-[#075e3d] px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
+                Benefits
               </div>
 
-              <div className="space-y-2 bg-white px-4 py-4 text-[9.5px] leading-relaxed text-[#354941]">
-                <p>
-                  Covered Amount - INR 1000 per day hospitalization with maximum
-                  limit upto 30 days in a year with 1 day deductible per claim.
-                </p>
+              <div className="grid grid-cols-[32px_1fr_145px] bg-[#edf5d9] text-[7px] font-extrabold uppercase tracking-wide text-[#356449]">
+                <div className="border-r border-[#d5dfc8] px-2 py-1.5">
+                  S No.
+                </div>
 
-                <p>
-                  Payout will be double in case of ICU hospitalization with
-                  maximum limit upto 15 days in a year with 1 day deductible per
-                  claim.
-                </p>
+                <div className="border-r border-[#d5dfc8] px-2 py-1.5">
+                  Particulars
+                </div>
 
-                <p>
-                  Customers can avail this benefit only for 30 days in a policy
-                  year collectively for normal hospitalization and 15 days in a
-                  policy year collectively for ICU hospitalization.
-                </p>
-              </div>
-            </div>
-
-            {/* PERSONAL ACCIDENT */}
-
-            <div className="mt-6 border border-[#aeca9b]">
-              <div className="bg-[#075e3d] px-4 py-3 text-[11px] font-extrabold text-white">
-                INCLUDING PROTECTION BENEFIT
-                <span className="mx-2 opacity-50">|</span>
-                Personal Accident Cover - 5 Lacs
+                <div className="px-2 py-2">Basis of Offering</div>
               </div>
 
-              <div className="px-4 py-5 text-[10px] text-[#354941]">
-                Inclusive of accidental death and total disability.
-              </div>
+              {[
+                ["1", "Personal Accident Cover-Sum Insured", "5 Lac"],
+                ["2", "Accidental Death", "100% of SI"],
+                ["3", "PPD", "Up to SI; As per PPD table of Group Care 360"],
+                ["4", "PTD", "Up to SI; As per PTD table of Group Care 360"],
+                ["5", "Claims payout-PA", "Re-imbursement"],
+                ["6", "Covered Amount- Daily Cash", "Rs. 1000"],
+                [
+                  "7",
+                  "Daily Cash Benefit",
+                  "Per day hospitalization with maximum limit upto 30 days in a year with 1 days deductible on Per claim.",
+                ],
+                [
+                  "8",
+                  "Daily Cash Benefit",
+                  "Payout double in case of ICU Hospitalization with max.limit upto 15days in a Year with 1 days deductible on Per claim.",
+                ],
+                [
+                  "9",
+                  "Daily Cash Benefit",
+                  "Customers Can Avail This Benefit Only For 30 days in a Policy Year Collectively For Normal & 15 days in a Policy",
+                ],
+                [
+                  "10",
+                  "Daily Cash Benefit",
+                  "Year collectively for ICU Hospitalization",
+                ],
+                [
+                  "11",
+                  "Wait Period-30 Days",
+                  "Yes(except for Injuries/Accident)",
+                ],
+                [
+                  "12",
+                  "Named Alimant (as defined in Group Care 360 Product)",
+                  "12 Months",
+                ],
+                ["13", "Pre-existing diseases", "12 Months"],
+                ["14", "Maternity", "Not Covered"],
+                ["15", "Claims payout-DC", "Re-imbursement"],
+              ].map(([serial, particular, offering]) => (
+                <div
+                  key={serial}
+                  className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[9px] leading-[1.18] text-[#354941] font-semibold"
+                >
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.25 font-bold text-[#176746]">
+                    {serial}
+                  </div>
+
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.25 font-semibold">
+                    {particular}
+                  </div>
+
+                  <div className="px-2 py-1.25">{offering}</div>
+                </div>
+              ))}
             </div>
 
             {/* INVOICE SUMMARY */}
 
-            <div className="mt-8">
+            <div className="mt-4">
               <h3 className="mb-4 text-[12px] font-extrabold uppercase tracking-wide text-[#176746]">
                 Invoice Summary
               </h3>
@@ -1073,7 +1087,7 @@ Payment Status: ${paymentStatus}`;
                 {/* LEFT */}
 
                 <div className="border-r border-[#d8e5db]">
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">
                       Customer Name
                     </span>
@@ -1083,7 +1097,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">
                       Mobile Number
                     </span>
@@ -1093,7 +1107,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">Email</span>
 
                     <strong className="max-w-[175px] break-words text-right text-[10px] font-bold leading-tight text-[#264338]">
@@ -1101,7 +1115,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">City</span>
 
                     <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
@@ -1109,7 +1123,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">State</span>
 
                     <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
@@ -1117,7 +1131,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">Pincode</span>
 
                     <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
@@ -1129,7 +1143,7 @@ Payment Status: ${paymentStatus}`;
                 {/* RIGHT */}
 
                 <div>
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">
                       Product / Plan
                     </span>
@@ -1139,7 +1153,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">Family</span>
 
                     <strong className="text-right text-[10px] text-[#264338]">
@@ -1147,7 +1161,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">Validity</span>
 
                     <strong className="text-right text-[10px] text-[#264338]">
@@ -1155,7 +1169,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
+                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
                     <span className="text-[10px] text-[#81908a]">
                       Invoice Date
                     </span>
@@ -1190,15 +1204,15 @@ Payment Status: ${paymentStatus}`;
 
             {/* PAYMENT */}
 
-            <div className="mt-7 grid grid-cols-2 gap-8">
+            <div className="mt-4 grid grid-cols-2 gap-5">
               {/* MEMBERSHIP */}
 
-              <div className="pt-4">
+              <div className="pt-2">
                 <p className="text-[9px] font-extrabold uppercase tracking-wide text-[#91a19a]">
                   Annual Membership
                 </p>
 
-                <div className="mt-1 text-[25px] font-extrabold text-[#075e3d]">
+                <div className="mt-1 text-[23px] font-extrabold text-[#075e3d]">
                   INR {formatINR(basePrice)}
                 </div>
 
@@ -1206,12 +1220,12 @@ Payment Status: ${paymentStatus}`;
                   + GST ({GST_RATE}%)
                 </p>
 
-                <div className="mt-5">
-                  <p className="text-[9px] font-extrabold uppercase tracking-wide text-[#91a19a]">
+                <div className="mt-3">
+                  <p className="text-[8px] font-extrabold uppercase tracking-wide text-[#91a19a]">
                     Payment Status
                   </p>
 
-                  <div className="mt-1 flex min-h-[30px] min-w-[120px] max-w-full items-center justify-center rounded-full bg-[#edf7ea] px-4 py-1.5">
+                  <div className="mt-1 flex min-h-[27px] min-w-[115px] max-w-full items-center justify-center rounded-full bg-[#edf7ea] px-3 py-1.25">
                     <span className="block whitespace-normal break-words text-center text-[9px] font-extrabold uppercase leading-tight text-[#176746]">
                       {paymentStatus}
                     </span>
@@ -1222,12 +1236,12 @@ Payment Status: ${paymentStatus}`;
               {/* PAYMENT SUMMARY */}
 
               <div className="border border-[#d8e5db]">
-                <div className="bg-[#f3faf4] px-5 py-3 text-[11px] font-extrabold uppercase tracking-wide text-[#176746]">
+                <div className="bg-[#f3faf4] px-4 py-2.5 text-[9px] font-extrabold uppercase tracking-wide text-[#176746]">
                   Payment Summary
                 </div>
 
-                <div className="px-5 py-3">
-                  <div className="flex justify-between py-2">
+                <div className="px-4 py-2">
+                  <div className="flex justify-between py-1.5">
                     <span className="text-[10px] text-[#81908a]">
                       Base Price
                     </span>
@@ -1237,7 +1251,7 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="flex justify-between border-b border-[#e2e9e4] py-2">
+                  <div className="flex justify-between border-b border-[#e2e9e4] py-1.5">
                     <span className="text-[10px] text-[#81908a]">
                       {GST_LABEL}
                     </span>
@@ -1247,12 +1261,12 @@ Payment Status: ${paymentStatus}`;
                     </strong>
                   </div>
 
-                  <div className="flex justify-between pt-3">
-                    <span className="text-[11px] font-extrabold uppercase text-[#176746]">
+                  <div className="flex justify-between pt-2">
+                    <span className="text-[10px] font-extrabold uppercase text-[#176746]">
                       Total Payable
                     </span>
 
-                    <strong className="text-[13px] font-extrabold text-[#176746]">
+                    <strong className="text-[12px] font-extrabold text-[#176746]">
                       INR {formatINR(totalAmount)}
                     </strong>
                   </div>
@@ -1262,13 +1276,13 @@ Payment Status: ${paymentStatus}`;
 
             {/* IMPORTANT NOTE */}
 
-            <div className="mt-8 border border-[#d0dfd3] bg-[#f5faf5] p-4">
+            <div className="mt-4 border border-[#d0dfd3] bg-[#f5faf5] p-3">
               <h4 className="text-[10px] font-extrabold uppercase tracking-wide text-[#176746]">
                 Important Note{" "}
                 <strong>( Reason for non-refund and non-cancellation )</strong>
               </h4>
 
-              <p className="mt-2 text-[9.5px] leading-relaxed text-[#3e5049]">
+              <p className="mt-2 text-[8.5px] leading-relaxed text-[#3e5049]">
                 Since the applicable amount is transferred to the respective
                 service partner after the policy is issued, cancellation and
                 refund cannot be processed after issuance.
@@ -1277,39 +1291,7 @@ Payment Status: ${paymentStatus}`;
 
             {/* COMPANY DETAILS */}
 
-            <div className="mt-5 text-center">
-              <p className="text-[9px] font-semibold uppercase tracking-wider text-[#81908a]">
-                GSTIN :{" "}
-                <span className="font-bold text-[#176746]">
-                  {COMPANY_GSTIN}
-                </span>
-              </p>
-
-              <p className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-[#81908a]">
-                CIN :{" "}
-                <span className="font-bold text-[#176746]">{COMPANY_CIN}</span>
-              </p>
-
-              <p className="mx-auto mt-2 max-w-[650px] text-[8px] leading-relaxed text-[#7d8d86]">
-                {COMPANY_ADDRESS}
-              </p>
-            </div>
-
-            {/* PAGE 2 FOOTER */}
-
-            <div className="absolute bottom-8 left-7 right-7 border-t border-[#e3e9e5] pt-4 sm:left-10 sm:right-10">
-              <p className="text-[10px] font-bold text-[#176746]">
-                Thank you for choosing {COMPANY_NAME}.
-              </p>
-
-              <div className="mt-2 flex items-center justify-between text-[8px] text-[#87958f]">
-                <span>
-                  This invoice is system generated. No signature is required.
-                </span>
-
-                <span>Page 2 of 3</span>
-              </div>
-            </div>
+           
           </section>
 
           {/* =================================================
@@ -1484,7 +1466,7 @@ Payment Status: ${paymentStatus}`;
 
             {/* CONTACT BAR */}
 
-            <div className="absolute bottom-[72px] left-7 right-7 rounded-xl bg-[#075e3d] px-5 py-4 sm:left-10 sm:right-10">
+            <div className="absolute bottom-[72px] left-7 right-7 rounded-xl bg-[#075e3d] px-8 py-4 sm:left-10 sm:right-10">
               <div className="flex items-center justify-center gap-6 text-white">
                 <div className="flex items-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d7a72e] text-[#075e3d]">

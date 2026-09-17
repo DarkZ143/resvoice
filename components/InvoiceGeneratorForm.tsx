@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import Image from "next/image";
@@ -1806,71 +1807,266 @@ export function InvoiceGeneratorForm({
               </p>
             </div>
 
-            <div className="space-y-3 p-5 sm:p-6">
-              {/* HOSPICASH */}
-
+            <div className="overflow-hidden p-5 sm:p-6">
               <div className="overflow-hidden rounded-xl border border-[#d6e2d9]">
-                <div className="flex items-center gap-3 bg-[#075e3d] px-4 py-3">
-                  <Hospital className="h-4 w-4 text-white" />
+                {/* TABLE HEADER */}
 
-                  <div>
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-[#b9e6c9]">
-                      Including Protection Benefit
-                    </p>
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d9c98d] bg-[#eef4f9]">
+                  <div className="px-3 py-3 text-[9px] font-extrabold uppercase tracking-wider text-[#244234]">
+                    S No.
+                  </div>
 
-                    <p className="text-sm font-bold text-white">
-                      Hospicash Benefit
-                    </p>
+                  <div className="border-l border-[#d6e2de] px-3 py-3 text-[9px] font-extrabold uppercase tracking-wider text-[#244234]">
+                    Particulars
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-3 text-[9px] font-extrabold uppercase tracking-wider text-[#244234]">
+                    Basis of Offering
                   </div>
                 </div>
 
-                <div className="space-y-2 bg-[#f7fbf7] p-4 text-[10px] leading-relaxed text-[#42544d]">
-                  <p>
-                    Covered Amount - <strong>INR 1000 per day</strong>{" "}
-                    hospitalization with maximum limit upto{" "}
-                    <strong>30 days in a year</strong> with 1 day deductible per
-                    claim.
-                  </p>
+                {/* 1 */}
 
-                  <p>
-                    Payout will be{" "}
-                    <strong className="text-[#176746]">
-                      double in case of ICU hospitalization
-                    </strong>{" "}
-                    with maximum limit upto <strong>15 days in a year</strong>{" "}
-                    with 1 day deductible per claim.
-                  </p>
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    1
+                  </div>
 
-                  <p>
-                    Customers can avail this benefit only for{" "}
-                    <strong>30 days in a policy year</strong> collectively for
-                    normal hospitalization and{" "}
-                    <strong>15 days in a policy year</strong> collectively for
-                    ICU hospitalization.
-                  </p>
-                </div>
-              </div>
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Personal Accident Cover-Sum Insured
+                  </div>
 
-              {/* PERSONAL ACCIDENT */}
-
-              <div className="overflow-hidden rounded-xl border border-[#d6e2d9]">
-                <div className="flex items-center gap-3 bg-[#075e3d] px-4 py-3">
-                  <ShieldCheck className="h-4 w-4 text-white" />
-
-                  <div>
-                    <p className="text-[8px] font-bold uppercase tracking-wider text-[#b9e6c9]">
-                      Including Protection Benefit
-                    </p>
-
-                    <p className="text-sm font-bold text-white">
-                      Personal Accident Cover - 5 Lacs
-                    </p>
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    5 Lac
                   </div>
                 </div>
 
-                <div className="bg-[#f7fbf7] p-4 text-[10px] leading-relaxed text-[#42544d]">
-                  Inclusive of <strong>accidental death</strong> and{" "}
-                  <strong>total disability.</strong>
+                {/* 2 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de] bg-[#fbfdfb]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    2
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Accidental Death
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    100% of SI
+                  </div>
+                </div>
+
+                {/* 3 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    3
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    PPD
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Up to SI; As per PPD table of Group Care 360
+                  </div>
+                </div>
+
+                {/* 4 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de] bg-[#fbfdfb]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    4
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    PTD
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Up to SI: As per PTD table of Group Care 360
+                  </div>
+                </div>
+
+                {/* 5 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    5
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Claims payout-PA
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Re-imbursement
+                  </div>
+                </div>
+
+                {/* 6 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de] bg-[#fbfdfb]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    6
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Covered Amount- Daily Cash
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Rs. 1000
+                  </div>
+                </div>
+
+                {/* 7 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    7
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Daily Cash Benefit
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Per day hospitalization with maximum limit upto 30 days in a
+                    year with 1 days deductible on Per claim.
+                  </div>
+                </div>
+
+                {/* 8 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de] bg-[#fbfdfb]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    8
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Daily Cash Benefit
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Payout double In case of ICU Hospitalization with max.limit
+                    upto 15days in a Year with 1 days deductible on Per claim.
+                  </div>
+                </div>
+
+                {/* 9 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    9
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Daily Cash Benefit
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Customers Can Avail This Benefit Only For 30 days in a
+                    Policy Year Collectively For Normal &amp; 15 days in a
+                    Policy
+                  </div>
+                </div>
+
+                {/* 10 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de] bg-[#fbfdfb]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    10
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Daily Cash Benefit
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Year collectively for ICU Hospitalization
+                  </div>
+                </div>
+
+                {/* 11 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    11
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Wait Period-30 Days
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Yes(except for Injuries/Accident)
+                  </div>
+                </div>
+
+                {/* 12 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de] bg-[#fbfdfb]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    12
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
+                    Named Alimant (as defined in Group Care 360 Product)
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    12 Months
+                  </div>
+                </div>
+
+                {/* 13 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    13
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Pre-existing diseases
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    12 Months
+                  </div>
+                </div>
+
+                {/* 14 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)] border-b border-[#d6e2de] bg-[#fbfdfb]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    14
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Maternity
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Not Covered
+                  </div>
+                </div>
+
+                {/* 15 */}
+
+                <div className="grid grid-cols-[56px_minmax(0,1.35fr)_minmax(0,1fr)]">
+                  <div className="px-3 py-2.5 text-[10px] font-bold text-[#31463d]">
+                    15
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Claims payout-DC
+                  </div>
+
+                  <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
+                    Re-imbursement
+                  </div>
                 </div>
               </div>
             </div>
