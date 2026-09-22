@@ -850,8 +850,9 @@ Payment Status: ${paymentStatus}`;
             <div className="mt-5 rounded-lg border border-[#efb0b0] bg-[#fff5f5] px-4 py-2.5">
               <p className="text-[10px] font-extrabold tracking-wide text-[#c62828]">
                 This policy is valid only for{" "}
-                <span className="uppercase">{validity}</span>,
-                You will need to renew the plan after the validity period ends to continue enjoying the benefits.
+                <span className="uppercase">{validity}</span>, You will need to
+                renew the plan after the validity period ends to continue
+                enjoying the benefits.
               </p>
             </div>
 
@@ -1290,8 +1291,6 @@ Payment Status: ${paymentStatus}`;
             </div>
 
             {/* COMPANY DETAILS */}
-
-           
           </section>
 
           {/* =================================================
@@ -1496,10 +1495,10 @@ Payment Status: ${paymentStatus}`;
 
             <div className="absolute bottom-7 left-7 right-7 sm:left-10 sm:right-10">
               <div className="border-t border-[#d5c18c] pt-3 text-center">
-                <p className="mx-auto max-w-[680px] text-[8px] font-medium leading-relaxed text-[#33463d]">
-                  By purchasing or activating a policy or healthcare-related
-                  service, the customer acknowledges and agrees to the above
-                  cancellation and refund terms.
+                <p className="mx-auto max-w-[680px] text-[10px]  leading-relaxed text-[#cc0000] font-bold">
+                  I agree that any dispute arising in connection with this
+                  policy shall be subject to the jurisdiction of the competent
+                  courts at Noida, as per applicable law.
                 </p>
               </div>
             </div>
