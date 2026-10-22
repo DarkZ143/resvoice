@@ -50,6 +50,18 @@ export interface InvoiceData {
    */
   issueDate: string;
 
+  /**
+   * Freelook period valid till date.
+   *
+   * Entered manually by admin.
+   *
+   * Expected format:
+   * yyyy-mm-dd
+   *
+   * Compatible with HTML date input.
+   */
+  freelookTill: string;
+
   // =========================================================
   // Transaction
   // =========================================================
@@ -152,7 +164,7 @@ export interface InvoiceData {
    *
    * Decimal values are supported.
    *
-   * Example:
+   * Examples:
    * 3500
    * 3500.50
    */

@@ -2,17 +2,7 @@
 
 import Image from "next/image";
 import { useRef, useState, type ReactNode } from "react";
-import {
-  ArrowLeft,
-  Download,
-  Share2,
-  Check,
-  Phone,
-  Globe,
-  FileText,
-  XCircle,
-  IndianRupee,
-} from "lucide-react";
+import { ArrowLeft, Download, Share2, Check } from "lucide-react";
 import confetti from "canvas-confetti";
 
 import type { InvoiceData } from "@/types";
@@ -93,6 +83,50 @@ const formatInvoiceDate = (value: string) => {
     month: "2-digit",
     year: "numeric",
   });
+};
+
+/* ==========================================================
+   MASKING
+
+   Mobile: 9999999999 -> +9199XXXXXX99
+   Email:  example123@gmail.com -> exXXXXX123@gmail.com
+   (domain is kept exactly as entered by admin)
+========================================================== */
+
+const maskPhone = (value: string) => {
+  let digits = String(value ?? "").replace(/\D/g, "");
+
+  if (!digits) return "-";
+
+  if (digits.length > 10 && digits.startsWith("91")) {
+    digits = digits.slice(2);
+  }
+
+  if (digits.length <= 4) return `+91${digits}`;
+
+  return `+91${digits.slice(0, 2)}${"X".repeat(digits.length - 4)}${digits.slice(-2)}`;
+};
+
+const maskEmail = (value: string) => {
+  const trimmed = String(value ?? "").trim();
+
+  const atIndex = trimmed.lastIndexOf("@");
+
+  if (atIndex <= 0) return trimmed || "-";
+
+  const local = trimmed.slice(0, atIndex);
+
+  const domain = trimmed.slice(atIndex);
+
+  if (local.length > 5) {
+    return `${local.slice(0, 2)}${"X".repeat(local.length - 5)}${local.slice(-3)}${domain}`;
+  }
+
+  if (local.length > 2) {
+    return `${local.slice(0, 2)}${"X".repeat(local.length - 2)}${domain}`;
+  }
+
+  return `${local}${domain}`;
 };
 
 /* ==========================================================
@@ -213,28 +247,21 @@ function DeclarationPoint({
   description: string;
 }) {
   return (
-    <div className="border-b border-[#dccb9a] pb-5">
-      <div className="flex items-start gap-4">
-        {/* NUMBER */}
-
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#075e3d] text-[18px] font-extrabold text-white">
+    <div className="border-b border-[#dccb9a] pb-3">
+      <div className="flex items-start gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#075e3d] text-[15px] font-extrabold text-white">
           {number}
         </div>
 
-        {/* ICON */}
-
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#7f9488] bg-white text-[#075e3d]">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#7f9488] bg-white text-[#075e3d]">
           {icon}
         </div>
 
-        {/* CONTENT */}
-
         <div className="min-w-0 pt-0.5">
-          <h3 className="text-[14px] font-extrabold uppercase leading-tight text-[#174936]">
+          <h3 className="text-[12px] font-extrabold uppercase leading-tight text-[#174936]">
             {title}
           </h3>
-
-          <p className="mt-2 max-w-[500px] text-[10px] leading-relaxed text-[#34483f]">
+          <p className="mt-1 max-w-[560px] text-[9px] leading-[1.35] text-[#34483f]">
             {description}
           </p>
         </div>
@@ -295,11 +322,23 @@ export function InvoiceViewer({
 
   const invoiceDate = formatInvoiceDate(invoiceData.issueDate);
 
+  const invoiceWithFreelook = invoiceData as InvoiceData & {
+    freelookTill?: string;
+  };
+
+  const freelookDate = formatInvoiceDate(
+    invoiceWithFreelook.freelookTill ?? "",
+  );
+
   /* ========================================================
      CUSTOMER
   ======================================================== */
 
   const email = String(invoiceData.email ?? "").trim() || "-";
+
+  const maskedEmail = maskEmail(invoiceData.email);
+
+  const maskedPhone = maskPhone(invoiceData.phoneNumber);
 
   const pincode = String(invoiceData.pincode ?? "").trim() || "-";
 
@@ -315,10 +354,21 @@ export function InvoiceViewer({
   const transactions = (() => {
     if (Array.isArray(invoiceData.transactions)) {
       return invoiceData.transactions
-        .map((transaction) => ({
-          transactionId: String(transaction.transactionId ?? "").trim(),
-          transactionDate: String(transaction.transactionDate ?? "").trim(),
-        }))
+        .map((transaction) => {
+          const typedTransaction = transaction as {
+            transactionId?: string | number;
+            transactionDate?: string;
+            amount?: number | string;
+          };
+
+          return {
+            transactionId: String(typedTransaction.transactionId ?? "").trim(),
+            transactionDate: String(
+              typedTransaction.transactionDate ?? "",
+            ).trim(),
+            amount: typedTransaction.amount ?? 0,
+          };
+        })
         .filter(
           (transaction) =>
             transaction.transactionId || transaction.transactionDate,
@@ -333,6 +383,7 @@ export function InvoiceViewer({
           {
             transactionId: legacyId,
             transactionDate: legacyDate,
+            amount: Number(invoiceData.totalAmount ?? 0),
           },
         ]
       : [];
@@ -346,6 +397,7 @@ export function InvoiceViewer({
         {
           transactionId: "-",
           transactionDate: "",
+          amount: 0,
         },
       ];
 
@@ -441,8 +493,8 @@ export function InvoiceViewer({
      
      EXACTLY THREE PAGES:
      1. Invoice Details
-     2. Protection + Payment
-     3. Cancellation & Refund Declaration
+     2. Protection Benefits 1–21 + 9 CI
+     3. Protection Benefits 22–29 + Invoice Summary + Contacts + Transaction Details
   ======================================================== */
 
   const handleDownloadPDF = async () => {
@@ -786,7 +838,7 @@ Payment Status: ${paymentStatus}`;
                 </p>
 
                 <p className="mt-4 text-[9px] font-bold uppercase tracking-wide text-[#8a9a93]">
-                  Date of Issue of Policy
+                  Date of Issue of Membership
                 </p>
 
                 <p className="mt-1 text-[12px] font-extrabold text-[#18352c]">
@@ -800,9 +852,9 @@ Payment Status: ${paymentStatus}`;
             <div className="mt-6 grid grid-cols-2 border border-[#d8e5db] bg-[#f4faf4] sm:grid-cols-5">
               <InfoCell label="Customer" value={invoiceData.customerName} />
 
-              <InfoCell label="Mobile" value={invoiceData.phoneNumber} />
+              <InfoCell label="Mobile" value={maskedPhone} />
 
-              <InfoCell label="Email" value={email} />
+              <InfoCell label="Email" value={maskedEmail} />
 
               <InfoCell label="City" value={invoiceData.city} />
 
@@ -826,10 +878,13 @@ Payment Status: ${paymentStatus}`;
                     {planDescription}
                   </p>
 
-                  <span className="mt-1.5 inline-block border border-[#e4c77f] bg-[#fffaf0] px-2 py-1 text-[8px] font-medium text-[#967013]">
-                    Once the plan is issued, it can not be cancelled or
-                    refunded.
-                  </span>
+                  <p className="mt-2 text-[10px] font-extrabold text-red-600">
+                    Freelook Period till {freelookDate}
+                  </p>
+
+                  <p className="mt-0.5 text-[9px] font-semibold text-red-600">
+                    (You can cancel this on or before {freelookDate})
+                  </p>
                 </div>
 
                 <div className="shrink-0 text-right">
@@ -843,25 +898,75 @@ Payment Status: ${paymentStatus}`;
                 </div>
               </div>
             </div>
-            {/* =================================================
-    POLICY VALIDITY ALERT
-================================================= */}
 
-            <div className="mt-5 rounded-lg border border-[#efb0b0] bg-[#fff5f5] px-4 py-2.5">
-              <p className="text-[10px] font-extrabold tracking-wide text-[#c62828]">
-                This policy is valid only for{" "}
-                <span className="uppercase">{validity}</span>, You will need to
-                renew the plan after the validity period ends to continue
-                enjoying the benefits.
-              </p>
-            </div>
+            {/* ANNUAL MEMBERSHIP + PAYMENT SUMMARY */}
+            <div className="mt-5 border-t border-[#dce7df] pt-4">
+              <h3 className="mb-3 text-[11px] font-extrabold uppercase tracking-wide text-[#176746]">
+                Annual Membership and Payment Summary
+              </h3>
 
-            {/* PLAN FACTS */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="pt-2">
+                  <p className="text-[9px] font-extrabold uppercase tracking-wide text-[#91a19a]">
+                    Annual Membership
+                  </p>
 
-            <div className="mt-6 grid grid-cols-2 border border-[#d8e5db]">
-              <InfoCell label="Family" value={family} />
+                  <div className="mt-1 text-[23px] font-extrabold text-[#075e3d]">
+                    INR {formatINR(basePrice)}
+                  </div>
 
-              <InfoCell label="Validity" value={validity} />
+                  <p className="mt-1 text-[9px] font-semibold text-[#71817a]">
+                    + GST ({GST_RATE}%)
+                  </p>
+
+                  <div className="mt-3">
+                    <p className="text-[8px] font-extrabold uppercase tracking-wide text-[#91a19a]">
+                      Payment Status
+                    </p>
+
+                    <div className="mt-1 flex min-h-[27px] min-w-[115px] max-w-full items-center justify-center rounded-full bg-[#edf7ea] px-3 py-1.25">
+                      <span className="block whitespace-normal break-words text-center text-[9px] font-extrabold uppercase leading-tight text-[#176746]">
+                        {paymentStatus}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border border-[#d8e5db]">
+                  <div className="bg-[#f3faf4] px-4 py-2.5 text-[9px] font-extrabold uppercase tracking-wide text-[#176746]">
+                    Payment Summary
+                  </div>
+
+                  <div className="px-4 py-2">
+                    <div className="flex justify-between py-1.5">
+                      <span className="text-[10px] text-[#81908a]">
+                        Base Price
+                      </span>
+                      <strong className="text-[10px] text-[#264338]">
+                        INR {formatINR(basePrice)}
+                      </strong>
+                    </div>
+
+                    <div className="flex justify-between border-b border-[#e2e9e4] py-1.5">
+                      <span className="text-[10px] text-[#81908a]">
+                        {GST_LABEL}
+                      </span>
+                      <strong className="text-[10px] text-[#264338]">
+                        INR {formatINR(gstAmount)}
+                      </strong>
+                    </div>
+
+                    <div className="flex justify-between pt-2">
+                      <span className="text-[10px] font-extrabold uppercase text-[#176746]">
+                        Total Payable
+                      </span>
+                      <strong className="text-[12px] font-extrabold text-[#176746]">
+                        INR {formatINR(totalAmount)}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* BENEFITS */}
@@ -968,17 +1073,17 @@ Payment Status: ${paymentStatus}`;
 
           <section
             id="invoice-page-2"
-            className="relative box-border h-[1123px] w-full overflow-hidden border-t border-[#e1e8e3] bg-white p-6 sm:p-8"
+            className="relative box-border h-[1123px] w-full overflow-hidden border-t border-[#e1e8e3] bg-white p-5 sm:p-6"
           >
             {/* PAGE HEADER */}
 
-            <div className="flex items-center justify-between border-b border-[#dce7df] pb-4">
+            <div className="flex items-center justify-between border-b border-[#dce7df] pb-3">
               <div>
-                <h2 className="text-[13px] font-extrabold uppercase tracking-wide text-[#176746]">
-                  Benefits
+                <h2 className="text-[14px] font-extrabold uppercase tracking-[0.06em] text-[#176746]">
+                  Protection Benefits
                 </h2>
 
-                <p className="mt-1 text-[8px] font-semibold text-[#87958f]">
+                <p className="mt-0.5 text-[7px] font-semibold text-[#87958f]">
                   {COMPANY_NAME}
                 </p>
               </div>
@@ -991,7 +1096,7 @@ Payment Status: ${paymentStatus}`;
                   </span>
                 </p>
 
-                <p className="mt-1 text-[8px] font-semibold text-[#87958f]">
+                <p className="mt-0.5 text-[7px] font-semibold text-[#87958f]">
                   CIN :{" "}
                   <span className="font-bold text-[#176746]">
                     {COMPANY_CIN}
@@ -1000,46 +1105,84 @@ Payment Status: ${paymentStatus}`;
               </div>
             </div>
 
-            {/* Benefits */}
+            {/* PROTECTION BENEFITS 1–21 + 9 CI */}
 
-            <div className="mt-6 overflow-hidden border border-[#aeca9b]">
-              <div className="bg-[#075e3d] px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-wide text-white">
-                Benefits
+            <div className="mt-2 overflow-hidden border border-[#aeca9b]">
+              {/* PERSONAL ACCIDENT COVER */}
+
+              <div className="bg-[#075e3d] px-3 py-2 text-center text-[9px] font-extrabold uppercase tracking-wide text-white">
+                Personal Accident Cover
               </div>
 
               <div className="grid grid-cols-[32px_1fr_145px] bg-[#edf5d9] text-[7px] font-extrabold uppercase tracking-wide text-[#356449]">
                 <div className="border-r border-[#d5dfc8] px-2 py-1.5">
                   S No.
                 </div>
-
                 <div className="border-r border-[#d5dfc8] px-2 py-1.5">
                   Particulars
                 </div>
-
-                <div className="px-2 py-2">Basis of Offering</div>
+                <div className="px-2 py-1.5">Basis of Offering</div>
               </div>
 
               {[
-                ["1", "Personal Accident Cover-Sum Insured", "5 Lac"],
-                ["2", "Accidental Death", "100% of SI"],
-                ["3", "PPD", "Up to SI; As per PPD table of Group Care 360"],
-                ["4", "PTD", "Up to SI; As per PTD table of Group Care 360"],
-                ["5", "Claims payout-PA", "Re-imbursement"],
-                ["6", "Covered Amount- Daily Cash", "Rs. 1000"],
+                ["1", "Personal Accident Cover Benefit", "5 Lac"],
+                ["2", "Accidental Death Benefit", "100% of SI"],
+                [
+                  "3",
+                  "Permanent Partial Disablement",
+                  "Up to SI; As per PPD table of Group Care 360",
+                ],
+                [
+                  "4",
+                  "Permanent Total Disablement",
+                  "Up to SI; As per PTD table of Group Care 360",
+                ],
+                [
+                  "5",
+                  "Claims payout - Personal Accident Medical Benefit",
+                  "Re-imbursement",
+                ],
+              ].map(([serial, particular, offering]) => (
+                <div
+                  key={serial}
+                  className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[7.5px] font-semibold leading-[1.1] text-[#354941]"
+                >
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.5 font-bold text-[#176746]">
+                    {serial}
+                  </div>
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.5">
+                    {particular}
+                  </div>
+                  <div className="px-2 py-1.5">{offering}</div>
+                </div>
+              ))}
+
+              {/* DAILY CASH ALLOWANCE */}
+
+              <div className="border-t border-[#d9e4d4] bg-[#075e3d] px-3 py-2 text-center text-[9px] font-extrabold uppercase tracking-wide text-white">
+                Daily Cash Allowance
+              </div>
+
+              {[
+                [
+                  "6",
+                  "Covered Amount- Daily Cash",
+                  "Rs. 1000 /- Per day max 30 days",
+                ],
                 [
                   "7",
-                  "Daily Cash Benefit",
+                  "Daily Cash Benefits (ICU)",
                   "Per day hospitalization with maximum limit upto 30 days in a year with 1 days deductible on Per claim.",
                 ],
                 [
                   "8",
-                  "Daily Cash Benefit",
-                  "Payout double in case of ICU Hospitalization with max.limit upto 15days in a Year with 1 days deductible on Per claim.",
+                  "Daily Cash Benefits (ICU)",
+                  "Payout double in case of ICU Hospitalization with max.limit upto 15 days in a Year with 1 days deductible on Per claim.",
                 ],
                 [
                   "9",
-                  "Daily Cash Benefit",
-                  "Customers Can Avail This Benefit Only For 30 days in a Policy Year Collectively For Normal & 15 days in a Policy",
+                  "Daily Cash Benefits (ICU)",
+                  "Customers Can Avail This Benefit Only For 30 days in a Membership Year Collectively For Normal & 15 days in a Membership",
                 ],
                 [
                   "10",
@@ -1051,455 +1194,481 @@ Payment Status: ${paymentStatus}`;
                   "Wait Period-30 Days",
                   "Yes(except for Injuries/Accident)",
                 ],
-                [
-                  "12",
-                  "Named Alimant (as defined in Group Care 360 Product)",
-                  "12 Months",
-                ],
-                ["13", "Pre-existing diseases", "12 Months"],
-                ["14", "Maternity", "Not Covered"],
-                ["15", "Claims payout-DC", "Re-imbursement"],
+                ["12", "Pre-existing diseases", "12 Months"],
+                ["13", "Maternity", "Not Covered"],
+                ["14", "Claims payout-DC", "Re-imbursement"],
               ].map(([serial, particular, offering]) => (
                 <div
                   key={serial}
-                  className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[9px] leading-[1.18] text-[#354941] font-semibold"
+                  className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[7.5px] font-semibold leading-[1.1] text-[#354941]"
                 >
-                  <div className="border-r border-[#d9e4d4] px-2 py-1.25 font-bold text-[#176746]">
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.5 font-bold text-[#176746]">
                     {serial}
                   </div>
-
-                  <div className="border-r border-[#d9e4d4] px-2 py-1.25 font-semibold">
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.5">
                     {particular}
                   </div>
-
-                  <div className="px-2 py-1.25">{offering}</div>
+                  <div className="px-2 py-1.5">{offering}</div>
                 </div>
               ))}
-            </div>
 
-            {/* INVOICE SUMMARY */}
+              {/* CRITICAL ILLNESS BENEFIT */}
 
-            <div className="mt-4">
-              <h3 className="mb-4 text-[12px] font-extrabold uppercase tracking-wide text-[#176746]">
-                Invoice Summary
-              </h3>
-
-              <div className="grid grid-cols-2 border border-[#d8e5db]">
-                {/* LEFT */}
-
-                <div className="border-r border-[#d8e5db]">
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">
-                      Customer Name
-                    </span>
-
-                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
-                      {invoiceData.customerName || "-"}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">
-                      Mobile Number
-                    </span>
-
-                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
-                      {invoiceData.phoneNumber || "-"}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">Email</span>
-
-                    <strong className="max-w-[175px] break-words text-right text-[10px] font-bold leading-tight text-[#264338]">
-                      {email}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">City</span>
-
-                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
-                      {invoiceData.city || "-"}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">State</span>
-
-                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
-                      {invoiceData.state || "-"}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">Pincode</span>
-
-                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
-                      {pincode}
-                    </strong>
-                  </div>
-                </div>
-
-                {/* RIGHT */}
-
-                <div>
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">
-                      Product / Plan
-                    </span>
-
-                    <strong className="max-w-[150px] break-words text-right text-[10px] text-[#264338]">
-                      {planName}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">Family</span>
-
-                    <strong className="text-right text-[10px] text-[#264338]">
-                      {family}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">Validity</span>
-
-                    <strong className="text-right text-[10px] text-[#264338]">
-                      {validity}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-4 py-2">
-                    <span className="text-[10px] text-[#81908a]">
-                      Invoice Date
-                    </span>
-
-                    <strong className="text-right text-[10px] text-[#264338]">
-                      {invoiceDate}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-5 py-2.5">
-                    <span className="text-[10px] text-[#81908a]">
-                      Invoice No.
-                    </span>
-
-                    <strong className="max-w-[150px] break-all text-right text-[10px] text-[#264338]">
-                      {invoiceData.invoiceNumber || "-"}
-                    </strong>
-                  </div>
-
-                  <div className="grid grid-cols-[1fr_auto] px-5 py-2.5">
-                    <span className="text-[10px] text-[#81908a]">
-                      Payment Status
-                    </span>
-
-                    <strong className="max-w-[150px] break-words text-right text-[10px] font-extrabold uppercase leading-tight text-[#176746]">
-                      {paymentStatus}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* PAYMENT */}
-
-            <div className="mt-4 grid grid-cols-2 gap-5">
-              {/* MEMBERSHIP */}
-
-              <div className="pt-2">
-                <p className="text-[9px] font-extrabold uppercase tracking-wide text-[#91a19a]">
-                  Annual Membership
-                </p>
-
-                <div className="mt-1 text-[23px] font-extrabold text-[#075e3d]">
-                  INR {formatINR(basePrice)}
-                </div>
-
-                <p className="mt-1 text-[9px] font-semibold text-[#71817a]">
-                  + GST ({GST_RATE}%)
-                </p>
-
-                <div className="mt-3">
-                  <p className="text-[8px] font-extrabold uppercase tracking-wide text-[#91a19a]">
-                    Payment Status
-                  </p>
-
-                  <div className="mt-1 flex min-h-[27px] min-w-[115px] max-w-full items-center justify-center rounded-full bg-[#edf7ea] px-3 py-1.25">
-                    <span className="block whitespace-normal break-words text-center text-[9px] font-extrabold uppercase leading-tight text-[#176746]">
-                      {paymentStatus}
-                    </span>
-                  </div>
-                </div>
+              <div className="border-t border-[#d9e4d4] bg-[#075e3d] px-3 py-2 text-center text-[9px] font-extrabold uppercase tracking-wide text-white">
+                Critical Illness Benefit
               </div>
 
-              {/* PAYMENT SUMMARY */}
-
-              <div className="border border-[#d8e5db]">
-                <div className="bg-[#f3faf4] px-4 py-2.5 text-[9px] font-extrabold uppercase tracking-wide text-[#176746]">
-                  Payment Summary
-                </div>
-
-                <div className="px-4 py-2">
-                  <div className="flex justify-between py-1.5">
-                    <span className="text-[10px] text-[#81908a]">
-                      Base Price
-                    </span>
-
-                    <strong className="text-[10px] text-[#264338]">
-                      INR {formatINR(basePrice)}
-                    </strong>
+              {[
+                ["16", "Benefit Amount", "1 Lac"],
+                ["17", "Critical Illness Benefit", "100% of SI"],
+                ["18", "Number of Critical Illness", "9 CI"],
+              ].map(([serial, particular, offering]) => (
+                <div
+                  key={serial}
+                  className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[7.5px] font-semibold leading-[1.1] text-[#354941]"
+                >
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.5 font-bold text-[#176746]">
+                    {serial}
                   </div>
-
-                  <div className="flex justify-between border-b border-[#e2e9e4] py-1.5">
-                    <span className="text-[10px] text-[#81908a]">
-                      {GST_LABEL}
-                    </span>
-
-                    <strong className="text-[10px] text-[#264338]">
-                      INR {formatINR(gstAmount)}
-                    </strong>
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.5">
+                    {particular}
                   </div>
-
-                  <div className="flex justify-between pt-2">
-                    <span className="text-[10px] font-extrabold uppercase text-[#176746]">
-                      Total Payable
-                    </span>
-
-                    <strong className="text-[12px] font-extrabold text-[#176746]">
-                      INR {formatINR(totalAmount)}
-                    </strong>
-                  </div>
+                  <div className="px-2 py-1.5">{offering}</div>
                 </div>
-              </div>
-            </div>
+              ))}
 
-            {/* IMPORTANT NOTE */}
+              {/* 9 CI CONDITIONS */}
 
-            <div className="mt-4 border border-[#d0dfd3] bg-[#f5faf5] p-3">
-              <h4 className="text-[10px] font-extrabold uppercase tracking-wide text-[#176746]">
-                Important Note{" "}
-                <strong>( Reason for non-refund and non-cancellation )</strong>
-              </h4>
-
-              <p className="mt-2 text-[8.5px] leading-relaxed text-[#3e5049]">
-                Since the applicable amount is transferred to the respective
-                service partner after the policy is issued, cancellation and
-                refund cannot be processed after issuance.
-              </p>
-            </div>
-
-            {/* COMPANY DETAILS */}
-          </section>
-
-          {/* =================================================
-              PAGE 3 — DECLARATION
-          ================================================= */}
-
-          <section
-            id="invoice-page-3"
-            className="relative box-border h-[1123px] w-full overflow-visible border-t border-[#e1e8e3] bg-[#fcfbf6] p-7 sm:p-10"
-          >
-            {/* TOP HEADER */}
-
-            <div className="flex items-start justify-between gap-6">
-              {/* LEFT TITLE */}
-
-              <div className="min-w-0 flex-1">
-                <div className="inline-flex items-center rounded-lg bg-[#075e3d] px-6 py-2.5">
-                  <span className="text-[19px] font-extrabold uppercase tracking-wide text-white">
-                    Declaration
-                  </span>
+              <div className="border-t border-[#d9e4d4] bg-[#fef2f2] px-3 py-2">
+                <div className="mb-1.5 text-center text-[8px] font-extrabold uppercase tracking-wide text-[#b91c1c]">
+                  9 CI (Critical Illness Conditions)
                 </div>
 
-                <div className="mt-4 flex items-center gap-3">
-                  <span className="h-px w-16 bg-[#c9a34d]" />
-
-                  <p className="text-[11px] font-extrabold uppercase tracking-wide text-[#174936]">
-                    Why Policy Can&apos;t Be Refunded
-                  </p>
-
-                  <span className="h-px w-16 bg-[#c9a34d]" />
-                </div>
-
-                <h1 className="mt-6 text-[31px] font-extrabold leading-[1.05] text-[#174936] sm:text-[36px]">
-                  Cancellation and
-                  <br />
-                  <span className="text-[#c38b16]">Refund Policy</span>
-                </h1>
-
-                <p className="mt-5 max-w-[470px] text-[11px] leading-relaxed text-[#263c34]">
-                  Please read our <strong>cancellation and refund terms</strong>{" "}
-                  carefully before purchasing or activating any policy or
-                  healthcare-related service.
-                </p>
-              </div>
-
-              {/* RIGHT BRAND */}
-
-              <div className="w-[190px] shrink-0 text-center">
-                <InvoiceLogo className="mx-auto h-[105px] w-[125px]" />
-
-                <div className="mt-1">
-                  <p className="font-serif text-[25px] font-bold tracking-wide text-[#174936]">
-                    RESTORE
-                  </p>
-
-                  <p className="mt-1 text-[11px] font-semibold text-[#c38b16]">
-                    Your Partner in Better Health
-                  </p>
-                </div>
-
-                <div className="mt-5 rounded-xl border border-[#70827a] bg-white px-3 py-3 text-left">
-                  <p className="text-[9px] font-semibold text-[#31473e]">
-                    GSTIN :{" "}
-                    <span className="font-bold text-[#174936]">
-                      {COMPANY_GSTIN}
-                    </span>
-                  </p>
-
-                  <p className="mt-2 text-[9px] font-semibold text-[#31473e]">
-                    CIN :{" "}
-                    <span className="font-bold text-[#174936]">
-                      {COMPANY_CIN}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* DIVIDER */}
-
-            <div className="mt-6 h-px bg-[#d8c595]" />
-
-            {/* DECLARATION POINTS */}
-
-            <div className="mt-7 space-y-5">
-              <DeclarationPoint
-                number="1"
-                icon={<FileText className="h-7 w-7" />}
-                title="No Refund After Policy Issuance"
-                description="After the policy has been issued, the premium amount will not be refunded."
-              />
-
-              <DeclarationPoint
-                number="2"
-                icon={<XCircle className="h-7 w-7" />}
-                title="No Cancellation After Policy Issuance"
-                description="Once the policy has been successfully issued, the policy cannot be cancelled."
-              />
-
-              <DeclarationPoint
-                number="3"
-                icon={<IndianRupee className="h-7 w-7" />}
-                title="Reason for Non-Refund and Non-Cancellation"
-                description="Since the applicable amount is transferred to the respective service partner after the policy is issued, cancellation and refund cannot be processed after issuance."
-              />
-            </div>
-
-            {/* =================================================
-                TRANSACTION DETAILS
-            ================================================= */}
-
-            <div className="mt-7 rounded-xl border border-[#d0c6a5] bg-[#f7f4e9] p-4">
-              <div className="mb-3 flex items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-[11px] font-extrabold uppercase tracking-[0.08em] text-[#174936]">
-                    Transaction Details
-                  </h3>
-
-                  <p className="mt-1 text-[8px] text-[#7a786d]">
-                    Transaction information associated with this invoice.
-                  </p>
-                </div>
-
-                <div className="rounded-full bg-[#075e3d] px-3 py-1 text-[8px] font-extrabold uppercase tracking-wide text-white">
-                  Verified Details
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <TransactionDetail
-                  label="Customer Name"
-                  value={invoiceData.customerName || "-"}
-                />
-
-                <TransactionDetail
-                  label="Product Name / Family"
-                  value={transactionProductName}
-                />
-              </div>
-
-              <div className="mt-3 rounded-lg border border-[#d9d3bc] bg-white px-4 py-3">
-                <p className="text-[8px] font-extrabold uppercase tracking-[0.08em] text-[#8b877a]">
-                  Transaction ID(s) &amp; Date/Time
-                </p>
-
-                <div className="mt-2 space-y-2">
-                  {displayTransactions.map((transaction, index) => (
+                <div className="grid grid-cols-2 gap-x-3 gap-y-0.5">
+                  {[
+                    "Cancer Of Specified Severity",
+                    "Myocardial Infarction",
+                    "Open Chest CABG",
+                    "Stroke Resulting in Permanent Symptoms",
+                    "Open Heart Replacement Or Repair Of Heart Valves",
+                    "Multiple Sclerosis with Persisting Symptoms",
+                    "Major Organ / Bone Marrow Transplant",
+                    "Permanent Paralysis Of Limbs",
+                    "Kidney Failure Requiring Regular Dialysis",
+                  ].map((condition, index) => (
                     <div
-                      key={`transaction-detail-${index}`}
-                      className="flex flex-col gap-1 rounded-md bg-[#f8f7f1] px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                      key={condition}
+                      className="min-w-0 text-[6.8px] font-semibold leading-[1.12] text-[#354941]"
                     >
-                      <span className="text-[8px] font-extrabold uppercase tracking-wide text-[#8b877a]">
-                        Payment {index + 1}
+                      <span className="mr-1 font-extrabold text-[#b91c1c]">
+                        {index + 1}.
                       </span>
-
-                      <div className="min-w-0 sm:text-right">
-                        <p className="break-all text-[11px] font-extrabold text-[#173f31]">
-                          {transaction.transactionId || "-"}
-                        </p>
-
-                        <p className="mt-0.5 text-[9px] font-semibold text-[#6f7b73]">
-                          {formatTransactionDateTime(
-                            transaction.transactionDate,
-                          )}
-                        </p>
-                      </div>
+                      {condition}
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* WAIT PERIODS */}
+
+              <div className="border-t border-[#d9e4d4] bg-[#f4f7ea] px-3 py-1.5 text-center text-[7px] font-extrabold uppercase tracking-wider text-[#356449]">
+                Wait Periods / Conditions
+              </div>
+
+              {[
+                ["19", "Initial Wait Period", "90 Days"],
+                ["20", "Survival Period", "0 days"],
+                ["21", "Pre-existing diseases", "Not Covered"],
+              ].map(([serial, particular, offering]) => (
+                <div
+                  key={serial}
+                  className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[7.5px] font-semibold leading-[1.1] text-[#354941]"
+                >
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.5 font-bold text-[#176746]">
+                    {serial}
+                  </div>
+                  <div className="border-r border-[#d9e4d4] px-2 py-1.5">
+                    {particular}
+                  </div>
+                  <div className="px-2 py-1.5">{offering}</div>
+                </div>
+              ))}
             </div>
 
-            {/* CONTACT BAR */}
+            {/* PAGE 2 FOOTER */}
 
-            <div className="absolute bottom-[72px] left-7 right-7 rounded-xl bg-[#075e3d] px-8 py-4 sm:left-10 sm:right-10">
-              <div className="flex items-center justify-center gap-6 text-white">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d7a72e] text-[#075e3d]">
-                    <Phone className="h-4 w-4" />
-                  </div>
+            <div className="absolute bottom-7 left-7 right-7 flex items-center justify-between border-t border-[#e3e9e5] pt-3 text-[8px] text-[#778780] sm:left-10 sm:right-10">
+              <span>Continued on page 3</span>
+              <span>Page 2 of 3</span>
+            </div>
+          </section>
 
-                  <span className="text-[13px] font-extrabold tracking-wide">
-                    {COMPANY_PHONE}
+          {/* =================================================
+              PAGE 3 — BENEFITS CONTINUED + INVOICE SUMMARY
+          ================================================= */}
+
+          <section
+            id="invoice-page-3"
+            className="relative box-border h-[1123px] w-full overflow-hidden border-t border-[#e1e8e3] bg-white p-4 sm:p-5"
+          >
+            <div className="flex items-center justify-between border-b border-[#dce7df] pb-2">
+              <div>
+                <h2 className="text-[12px] font-extrabold uppercase tracking-wide text-[#176746]">
+                  Protection Benefits — Continued
+                </h2>
+
+                <p className="mt-1 text-[7px] font-semibold text-[#87958f]">
+                  {COMPANY_NAME}
+                </p>
+              </div>
+
+              <div className="text-right">
+                <p className="text-[7px] font-semibold text-[#87958f]">
+                  GSTIN :{" "}
+                  <span className="font-bold text-[#176746]">
+                    {COMPANY_GSTIN}
                   </span>
-                </div>
+                </p>
 
-                <div className="h-7 w-px bg-white/40" />
-
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#d7a72e] text-[#075e3d]">
-                    <Globe className="h-4 w-4" />
-                  </div>
-
-                  <span className="text-[13px] font-extrabold tracking-wide">
-                    {COMPANY_WEBSITE}
+                <p className="mt-1 text-[7px] font-semibold text-[#87958f]">
+                  CIN :{" "}
+                  <span className="font-bold text-[#176746]">
+                    {COMPANY_CIN}
                   </span>
-                </div>
+                </p>
               </div>
             </div>
 
-            {/* ACKNOWLEDGEMENT */}
+            <div className="mt-2 overflow-hidden border border-[#aeca9b]">
+              {/* VECTOR BORNE DISEASES */}
 
-            <div className="absolute bottom-7 left-7 right-7 sm:left-10 sm:right-10">
-              <div className="border-t border-[#d5c18c] pt-3 text-center">
-                <p className="mx-auto max-w-[680px] text-[10px]  leading-relaxed text-[#cc0000] font-bold">
-                  I agree that any dispute arising in connection with this
-                  policy shall be subject to the jurisdiction of the competent
-                  courts at Noida, as per applicable law.
+              <div className="border-t border-[#d9e4d4] bg-[#075e3d] px-3 py-1.5 text-center text-[8px] font-extrabold uppercase tracking-wide text-white">
+                Vector Borne Diseases
+              </div>
+
+              <div className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[7.5px] font-semibold leading-[1.1] text-[#354941]">
+                <div className="border-r border-[#d9e4d4] px-2 py-[3px] font-bold text-[#176746]">
+                  22
+                </div>
+                <div className="border-r border-[#d9e4d4] px-2 py-[3px]">
+                  Covered Amount
+                </div>
+                <div className="px-2 py-[3px]">
+                  Coverage amount – Rs 10,000, One time fixed payment due to
+                  below mentioned listed conditions.
+                </div>
+              </div>
+
+              <div className="border-t border-[#d9e4d4] bg-[#f4f7ea] px-3 py-1 text-center text-[6.5px] font-extrabold uppercase tracking-wider text-[#356449]">
+                Wait Periods / Conditions
+              </div>
+
+              {[
+                ["23", "30 Days", "Yes"],
+                ["24", "Pre-existing diseases", "Not Covered"],
+                ["25", "Maternity", "Not Covered"],
+              ].map(([serial, particular, offering]) => (
+                <div
+                  key={serial}
+                  className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[7.5px] font-semibold leading-[1.1] text-[#354941]"
+                >
+                  <div className="border-r border-[#d9e4d4] px-2 py-[3px] font-bold text-[#176746]">
+                    {serial}
+                  </div>
+                  <div className="border-r border-[#d9e4d4] px-2 py-[3px]">
+                    {particular}
+                  </div>
+                  <div className="px-2 py-[3px]">{offering}</div>
+                </div>
+              ))}
+
+              {/* CONVALESCENCE BENEFIT */}
+
+              <div className="border-t border-[#d9e4d4] bg-[#075e3d] px-3 py-1.5 text-center text-[8px] font-extrabold uppercase tracking-wide text-white">
+                Convalescence Benefit
+              </div>
+
+              <div className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[7.5px] font-semibold leading-[1.1] text-[#354941]">
+                <div className="border-r border-[#d9e4d4] px-2 py-[3px] font-bold text-[#176746]">
+                  26
+                </div>
+                <div className="border-r border-[#d9e4d4] px-2 py-[3px]">
+                  Convalescence Benefit:- (provided only in case of
+                  Comprehensive hospitalization)
+                </div>
+                <div className="px-2 py-[3px]">
+                  Coverage amount – Rs 5000, Minimum hospitalization Duration –
+                  3 days This Benefit will be allowed for maximum 2 times in
+                  cover year and maximum 3 payments per hospitalization Payment
+                  Periodicity – Once in 3 days
+                </div>
+              </div>
+
+              <div className="border-t border-[#d9e4d4] bg-[#f4f7ea] px-3 py-1 text-center text-[6.5px] font-extrabold uppercase tracking-wider text-[#356449]">
+                Wait Periods / Conditions
+              </div>
+
+              {[
+                ["27", "30 Days", "Yes (except for Injuries/Accident)"],
+                ["28", "Pre-existing diseases", "12 Months"],
+                ["29", "Maternity", "Not Covered"],
+              ].map(([serial, particular, offering]) => (
+                <div
+                  key={serial}
+                  className="grid grid-cols-[32px_1fr_145px] border-t border-[#d9e4d4] text-[7.5px] font-semibold leading-[1.1] text-[#354941]"
+                >
+                  <div className="border-r border-[#d9e4d4] px-2 py-[3px] font-bold text-[#176746]">
+                    {serial}
+                  </div>
+                  <div className="border-r border-[#d9e4d4] px-2 py-[3px]">
+                    {particular}
+                  </div>
+                  <div className="px-2 py-[3px]">{offering}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-2 border-t border-[#dce7df] pt-2">
+              {/* INVOICE SUMMARY */}
+
+              <div className="mt-2">
+                <h3 className="mb-2 text-[10px] font-extrabold uppercase tracking-wide text-[#176746]">
+                  Invoice Summary
+                </h3>
+
+                <div className="grid grid-cols-2 border border-[#d8e5db]">
+                  {/* LEFT */}
+
+                  <div className="border-r border-[#d8e5db]">
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">
+                        Customer Name
+                      </span>
+
+                      <strong className="max-w-[150px] break-words text-right text-[9px] text-[#264338]">
+                        {invoiceData.customerName || "-"}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">
+                        Mobile Number
+                      </span>
+
+                      <strong className="max-w-[150px] break-words text-right text-[9px] text-[#264338]">
+                        {maskedPhone}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">Email</span>
+
+                      <strong className="max-w-[175px] break-words text-right text-[10px] font-bold leading-tight text-[#264338]">
+                        {maskedEmail}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">City</span>
+
+                      <strong className="max-w-[150px] break-words text-right text-[9px] text-[#264338]">
+                        {invoiceData.city || "-"}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">State</span>
+
+                      <strong className="max-w-[150px] break-words text-right text-[9px] text-[#264338]">
+                        {invoiceData.state || "-"}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">Pincode</span>
+
+                      <strong className="max-w-[150px] break-words text-right text-[9px] text-[#264338]">
+                        {pincode}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* RIGHT */}
+
+                  <div>
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">
+                        Product / Plan
+                      </span>
+
+                      <strong className="max-w-[150px] break-words text-right text-[9px] text-[#264338]">
+                        {planName}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">Family</span>
+
+                      <strong className="text-right text-[9px] text-[#264338]">
+                        {family}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">
+                        Validity
+                      </span>
+
+                      <strong className="text-right text-[9px] text-[#264338]">
+                        {validity}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">
+                        Invoice Date
+                      </span>
+
+                      <strong className="text-right text-[9px] text-[#264338]">
+                        {invoiceDate}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] border-b border-[#e1e8e3] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">
+                        Invoice No.
+                      </span>
+
+                      <strong className="max-w-[150px] break-all text-right text-[9px] text-[#264338]">
+                        {invoiceData.invoiceNumber || "-"}
+                      </strong>
+                    </div>
+
+                    <div className="grid grid-cols-[1fr_auto] px-3 py-1">
+                      <span className="text-[9px] text-[#81908a]">
+                        Payment Status
+                      </span>
+
+                      <strong className="max-w-[150px] break-words text-right text-[10px] font-extrabold uppercase leading-tight text-[#176746]">
+                        {paymentStatus}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* PAYMENT SUMMARY MOVED TO PAGE 1 */}
+
+              {/* QUERY / COMPLAINT CONTACTS */}
+              <div className="mt-3 border-t border-[#d5c18c] pt-3 text-left">
+                <p className="text-[9px] font-extrabold leading-tight text-[#173f31]">
+                  For any queries or complaints, please contact us at:
                 </p>
+
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  <div className="rounded-lg border border-[#d8e2dc] bg-[#f7faf7] px-3 py-2.5">
+                    <p className="text-[8.5px] font-extrabold uppercase tracking-wide text-[#075e3d]">
+                      Contact 1
+                    </p>
+                    <p className="mt-1 break-all text-[8.5px] leading-tight text-[#173f31]">
+                      <span className="font-bold">Email:</span>{" "}
+                      <span className="font-semibold">
+                        helpline@restorehealthservices.in
+                      </span>
+                    </p>
+                    <p className="mt-1 text-[8.5px] leading-tight text-[#173f31]">
+                      <span className="font-bold">Phone:</span>{" "}
+                      <span className="font-bold">+91 92054 56671</span>
+                    </p>
+                  </div>
+
+                  <div className="rounded-lg border border-[#d8e2dc] bg-[#f7faf7] px-3 py-2.5">
+                    <p className="text-[8.5px] font-extrabold uppercase tracking-wide text-[#075e3d]">
+                      Contact 2
+                    </p>
+                    <p className="mt-1 break-all text-[8.5px] leading-tight text-[#173f31]">
+                      <span className="font-bold">Email:</span>{" "}
+                      <span className="font-semibold">
+                        issuance@restorehealthservices.in
+                      </span>
+                    </p>
+                    <p className="mt-1 text-[8.5px] leading-tight text-[#173f31]">
+                      <span className="font-bold">Phone:</span>{" "}
+                      <span className="font-bold">+91 8448507406</span>
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* TRANSACTION DETAILS */}
+              <div className="mt-2 rounded-lg border border-[#d0c6a5] bg-[#f7f4e9] p-2.5">
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <h3 className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#174936]">
+                    Transaction Details
+                  </h3>
+                  <span className="text-[6.5px] font-bold uppercase tracking-wide text-[#8b877a]">
+                    Payment Details
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <TransactionDetail
+                    label="Customer Name"
+                    value={invoiceData.customerName || "-"}
+                  />
+                  <TransactionDetail
+                    label="Product Name / Family"
+                    value={transactionProductName}
+                  />
+                </div>
+
+                <div className="mt-1.5 rounded-md border border-[#d9d3bc] bg-white px-2 py-1.5">
+                  <div className="space-y-1">
+                    {displayTransactions.map((transaction, index) => (
+                      <div
+                        key={`transaction-detail-${index}`}
+                        className="flex items-center justify-between gap-2 rounded bg-[#f8f7f1] px-2 py-1"
+                      >
+                        <div className="flex min-w-0 items-center gap-1.5">
+                          <span className="shrink-0 text-[7.5px] font-extrabold text-[#173f31]">
+                            Amount {index + 1}.
+                          </span>
+                          <span className="text-[7.5px] font-bold text-[#075e3d]">
+                            ₹ {transaction.amount || "0"}
+                          </span>
+                        </div>
+                        <span className="min-w-0 break-all text-right text-[7.5px] font-extrabold leading-tight text-[#173f31]">
+                          <span>Transaction ID : </span>
+                          {transaction.transactionId || "-"}
+                          <div>
+                           Time:{" "}
+                            {formatTransactionDateTime(
+                              transaction.transactionDate,
+                            )}
+                          </div>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* COMPANY DETAILS */}
+            </div>
+
+            {/* PAGE 3 FOOTER */}
+
+            <div className="absolute bottom-4 left-7 right-7 border-t border-[#e3e9e5] pt-2 sm:left-10 sm:right-10">
+              <p className="text-[8px] font-bold text-[#176746]">
+                Thank you for choosing {COMPANY_NAME}.
+              </p>
+
+              <div className="mt-0.5 flex items-center justify-between text-[7px] text-[#87958f]">
+                <span>
+                  This invoice is system generated. No signature is required.
+                </span>
+
+                <span>Page 3 of 3</span>
               </div>
             </div>
           </section>

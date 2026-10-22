@@ -88,17 +88,17 @@ const INDIAN_STATES = [
 
 const FAMILY_OPTIONS = [
   {
-    value: "1A",
+    value: "1 Adult",
     description: "Annual health plan membership for individual coverage.",
   },
   {
-    value: "2A",
-    description: "Annual family health plan membership for 2 adults.",
+    value: "2 Adults",
+    description: "Annual family health plan membership for 2 Adults.",
   },
   {
-    value: "2A + 2C",
+    value: "2 Adults + 2 Child",
     description:
-      "Annual family health plan membership for 2 adults and 2 children.",
+      "Annual family health plan membership for 2 Adults and 2 Children.",
   },
 ] as const;
 
@@ -110,42 +110,42 @@ const PLAN_OPTIONS = [
   {
     id: "individual-10000",
     name: "Individual",
-    coverage: "Family Coverage: 1A",
+    coverage: "Family Coverage: 1 Adult",
     price: 10000,
     planName: "Individual",
-    family: "1A",
+    family: "1 Adult",
   },
   {
     id: "floater-20000",
     name: "Floater",
-    coverage: "Family Coverage: 2A",
+    coverage: "Family Coverage: 2 Adults",
     price: 20000,
     planName: "Floater",
-    family: "2A",
+    family: "2 Adults",
   },
   {
     id: "floater-30000",
     name: "Floater",
-    coverage: "Family Coverage: 2A",
+    coverage: "Family Coverage: 2 Adults",
     price: 30000,
     planName: "Floater",
-    family: "2A",
+    family: "2 Adults",
   },
   {
     id: "floater-50000",
     name: "Floater",
-    coverage: "Family Coverage: 2A + 2C",
+    coverage: "Family Coverage: 2 Adults + 2 Children",
     price: 50000,
     planName: "Floater",
-    family: "2A + 2C",
+    family: "2 Adults + 2 Child",
   },
   {
     id: "exec-100000",
     name: "Exec Floater",
-    coverage: "Family Coverage: 2A + 2C",
+    coverage: "Family Coverage: 2 Adults + 2 Children",
     price: 100000,
     planName: "Exec Floater",
-    family: "2A + 2C",
+    family: "2 Adults + 2 Child",
     featured: true,
   },
 ];
@@ -224,6 +224,18 @@ export function InvoiceGeneratorForm({
   );
 
   /* =======================================================
+     INVOICE NUMBER
+     User enters only the numeric sequence.
+     Example: 81 -> RHS00081
+  ======================================================== */
+
+  const [invoiceSequenceInput, setInvoiceSequenceInput] = useState(() => {
+    const existing = String(invoiceData.invoiceNumber ?? "").trim();
+    const digits = existing.replace(/\D/g, "");
+    return digits ? String(Number(digits)) : "";
+  });
+
+  /* =======================================================
      MULTIPLE TRANSACTIONS
 
      A customer can pay in any number of separate pieces.
@@ -231,18 +243,31 @@ export function InvoiceGeneratorForm({
   ======================================================== */
 
   type TransactionEntry = {
+    amount: string;
     transactionId: string;
     transactionDate: string;
   };
 
-  const currentTransactions: TransactionEntry[] =
-    invoiceData.transactions ?? [];
+  const normalizeTransactions = (
+    source: InvoiceData["transactions"],
+  ): TransactionEntry[] =>
+    (source ?? []).map((transaction) => ({
+      amount: String(
+        (transaction as { amount?: string | number }).amount ?? "",
+      ),
+      transactionId: String(transaction.transactionId ?? ""),
+      transactionDate: String(transaction.transactionDate ?? ""),
+    }));
+
+  const currentTransactions: TransactionEntry[] = normalizeTransactions(
+    invoiceData.transactions,
+  );
 
   const [transactions, setTransactions] =
     useState<TransactionEntry[]>(currentTransactions);
 
   useEffect(() => {
-    setTransactions(invoiceData.transactions ?? []);
+    setTransactions(normalizeTransactions(invoiceData.transactions));
   }, [invoiceData.transactions]);
 
   const updateTransactions = (nextTransactions: TransactionEntry[]) => {
@@ -261,6 +286,7 @@ export function InvoiceGeneratorForm({
     updateTransactions([
       ...transactions,
       {
+        amount: "",
         transactionId: "",
         transactionDate: "",
       },
@@ -269,7 +295,7 @@ export function InvoiceGeneratorForm({
 
   const handleTransactionChange = (
     index: number,
-    field: "transactionId" | "transactionDate",
+    field: "amount" | "transactionId" | "transactionDate",
     value: string,
   ) => {
     const nextTransactions = transactions.map(
@@ -321,6 +347,12 @@ export function InvoiceGeneratorForm({
     );
   }, [invoiceData.totalAmount]);
 
+  useEffect(() => {
+    const existing = String(invoiceData.invoiceNumber ?? "").trim();
+    const digits = existing.replace(/\D/g, "");
+    setInvoiceSequenceInput(digits ? String(Number(digits)) : "");
+  }, [invoiceData.invoiceNumber]);
+
   /* =======================================================
      PRICING
 
@@ -356,14 +388,20 @@ export function InvoiceGeneratorForm({
      GENERIC INPUT
   ======================================================== */
 
+  type InvoiceFormData = InvoiceData & {
+    freelookTill?: string;
+  };
+
+  const formData = invoiceData as InvoiceFormData;
+
   const handleInputChange = (
-    field: keyof InvoiceData,
+    field: keyof InvoiceData | "freelookTill",
     value: string | number,
   ) => {
     onChange({
-      ...invoiceData,
+      ...formData,
       [field]: value,
-    });
+    } as InvoiceData);
   };
 
   /* =======================================================
@@ -400,7 +438,7 @@ export function InvoiceGeneratorForm({
   ======================================================== */
 
   const handleCustomPlan = () => {
-    const defaultFamily = "2A";
+    const defaultFamily = "2 Adults";
 
     setBasePriceInput("");
     setGstAmountInput("");
@@ -512,6 +550,23 @@ export function InvoiceGeneratorForm({
   };
 
   /* =======================================================
+     INVOICE NUMBER
+     NUMBERS ONLY
+     81 -> RHS00081
+  ======================================================== */
+
+  const handleInvoiceNumberChange = (value: string) => {
+    const numericValue = value.replace(/\D/g, "").slice(0, 5);
+
+    setInvoiceSequenceInput(numericValue ? String(Number(numericValue)) : "");
+
+    onChange({
+      ...invoiceData,
+      invoiceNumber: numericValue ? `RHS${numericValue.padStart(5, "0")}` : "",
+    });
+  };
+
+  /* =======================================================
      PINCODE
      NUMBERS ONLY
      EXACTLY 6 DIGITS
@@ -532,6 +587,18 @@ export function InvoiceGeneratorForm({
 
   const handleGenerate = () => {
     const pincode = invoiceData.pincode?.trim() || "";
+    const invoiceNumber = invoiceData.invoiceNumber?.trim() || "";
+    const freelookTill = formData.freelookTill?.trim() || "";
+
+    if (!/^RHS\d{5}$/.test(invoiceNumber)) {
+      window.alert("Please enter a valid invoice number.");
+      return;
+    }
+
+    if (!freelookTill) {
+      window.alert("Please enter the Freelook Period Till date.");
+      return;
+    }
 
     if (pincode && pincode.length !== 6) {
       window.alert("Please enter a valid 6-digit pincode.");
@@ -547,11 +614,14 @@ export function InvoiceGeneratorForm({
       transactions.length === 0 ||
       transactions.some(
         (transaction) =>
-          !transaction.transactionId.trim() || !transaction.transactionDate,
+          !transaction.amount.trim() ||
+          Number(transaction.amount) <= 0 ||
+          !transaction.transactionId.trim() ||
+          !transaction.transactionDate,
       )
     ) {
       window.alert(
-        "Please add at least one complete transaction with ID and date/time.",
+        "Please add at least one complete transaction with amount, ID and date/time.",
       );
       return;
     }
@@ -572,7 +642,7 @@ export function InvoiceGeneratorForm({
       transition={{
         duration: 0.25,
       }}
-      className="min-h-screen bg-[#f4f7f4] pb-16 text-[#18352c]"
+      className="min-h-screen bg-[#f4f7f4] pb-16 text-[#18352 Children]"
     >
       {/* =====================================================
           TOP NAVIGATION
@@ -630,7 +700,7 @@ export function InvoiceGeneratorForm({
                 </span>
               </div>
 
-              <h1 className="text-2xl font-extrabold tracking-tight text-[#17362c] sm:text-3xl">
+              <h1 className="text-2xl font-extrabold tracking-tight text-[#17362 Children] sm:text-3xl">
                 Create Health Plan Invoice
               </h1>
 
@@ -662,7 +732,7 @@ export function InvoiceGeneratorForm({
 
           <section className="overflow-hidden rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
             <div className="border-b border-[#e3ebe6] bg-[#f8fbf8] px-5 py-4 sm:px-6">
-              <h2 className="text-base font-bold text-[#18352c]">
+              <h2 className="text-base font-bold text-[#18352 Children]">
                 Company Information
               </h2>
             </div>
@@ -679,7 +749,7 @@ export function InvoiceGeneratorForm({
                 />
 
                 <div className="flex-1">
-                  <h3 className="text-lg font-extrabold text-[#17362c]">
+                  <h3 className="text-lg font-extrabold text-[#17362 Children]">
                     {COMPANY_NAME}
                   </h3>
 
@@ -713,7 +783,7 @@ export function InvoiceGeneratorForm({
                 </div>
 
                 <div>
-                  <h2 className="text-base font-bold text-[#18352c]">
+                  <h2 className="text-base font-bold text-[#18352 Children]">
                     Invoice Details
                   </h2>
 
@@ -738,17 +808,26 @@ export function InvoiceGeneratorForm({
                 <div className="relative">
                   <FileText className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
 
-                  <input
-                    id="invoice-number-input"
-                    required
-                    type="text"
-                    value={invoiceData.invoiceNumber}
-                    onChange={(event) =>
-                      handleInputChange("invoiceNumber", event.target.value)
-                    }
-                    placeholder="RHS-260831-S"
-                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
-                  />
+                  <div className="flex overflow-hidden rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] transition focus-within:border-[#4f8b6c] focus-within:ring-2 focus-within:ring-[#4f8b6c]/10">
+                    <span className="flex items-center border-r border-[#d9e4dd] bg-[#f0f6f2] px-3 pl-10 text-sm font-extrabold text-[#176746]">
+                      RHS
+                    </span>
+                    <input
+                      id="invoice-number-input"
+                      required
+                      type="text"
+                      inputMode="numeric"
+                      value={invoiceSequenceInput}
+                      onChange={(event) =>
+                        handleInvoiceNumberChange(event.target.value)
+                      }
+                      placeholder="00081"
+                      className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm font-extrabold tracking-wide text-[#18352 Children] outline-none"
+                    />
+                  </div>
+                  <p className="mt-1.5 text-[9px] text-[#819189]">
+                    Enter only the number. Example: 81 → RHS00081
+                  </p>
                 </div>
               </div>
 
@@ -773,7 +852,33 @@ export function InvoiceGeneratorForm({
                     onChange={(event) =>
                       handleInputChange("issueDate", event.target.value)
                     }
-                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  />
+                </div>
+              </div>
+
+              {/* FREELOOK PERIOD TILL */}
+
+              <div>
+                <label
+                  htmlFor="freelook-till-input"
+                  className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                >
+                  Freelook Period Till
+                </label>
+
+                <div className="relative">
+                  <CalendarDays className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                  <input
+                    id="freelook-till-input"
+                    required
+                    type="date"
+                    value={formData.freelookTill ?? ""}
+                    onChange={(event) =>
+                      handleInputChange("freelookTill", event.target.value)
+                    }
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                   />
                 </div>
               </div>
@@ -797,7 +902,7 @@ export function InvoiceGeneratorForm({
                     onChange={(event) =>
                       handlePaymentStatusChange(event.target.value)
                     }
-                    className="w-full appearance-none rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    className="w-full appearance-none rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                   >
                     {PAYMENT_STATUS_OPTIONS.map((status) => (
                       <option key={status} value={status}>
@@ -851,7 +956,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div>
-                    <h2 className="text-base font-bold text-[#18352c]">
+                    <h2 className="text-base font-bold text-[#18352 Children]">
                       Transaction Details
                     </h2>
 
@@ -950,7 +1055,41 @@ export function InvoiceGeneratorForm({
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                        {/* AMOUNT */}
+                        <div>
+                          <label
+                            htmlFor={`transaction-amount-input-${index}`}
+                            className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-[#74877e]"
+                          >
+                            Amount (₹)
+                          </label>
+
+                          <div className="relative">
+                            <BadgeIndianRupee className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#83958d]" />
+
+                            <input
+                              id={`transaction-amount-input-${index}`}
+                              required
+                              type="text"
+                              inputMode="decimal"
+                              value={transaction.amount}
+                              onChange={(event) =>
+                                handleTransactionChange(
+                                  index,
+                                  "amount",
+                                  event.target.value
+                                    .replace(/[^0-9.]/g, "")
+                                    .replace(/(\..*)\./g, "$1"),
+                                )
+                              }
+                              placeholder="Enter amount"
+                              className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-bold text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                            />
+                          </div>
+                        </div>
+
+                        {/* TRANSACTION ID */}
                         <div>
                           <label
                             htmlFor={`transaction-id-input-${index}`}
@@ -975,11 +1114,12 @@ export function InvoiceGeneratorForm({
                                 )
                               }
                               placeholder="Enter transaction ID"
-                              className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                              className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                             />
                           </div>
                         </div>
 
+                        {/* TRANSACTION DATE */}
                         <div>
                           <label
                             htmlFor={`transaction-date-input-${index}`}
@@ -1003,7 +1143,7 @@ export function InvoiceGeneratorForm({
                                   event.target.value,
                                 )
                               }
-                              className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                              className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                             />
                           </div>
                         </div>
@@ -1046,7 +1186,7 @@ export function InvoiceGeneratorForm({
                 </div>
 
                 <div>
-                  <h2 className="text-base font-bold text-[#18352c]">
+                  <h2 className="text-base font-bold text-[#18352 Children]">
                     Customer Details
                   </h2>
 
@@ -1077,7 +1217,7 @@ export function InvoiceGeneratorForm({
                     handleInputChange("customerName", event.target.value)
                   }
                   placeholder="Enter customer name"
-                  className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                 />
               </div>
 
@@ -1107,7 +1247,7 @@ export function InvoiceGeneratorForm({
                         handleInputChange("phoneNumber", event.target.value)
                       }
                       placeholder="9876543210"
-                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                     />
                   </div>
                 </div>
@@ -1145,7 +1285,7 @@ export function InvoiceGeneratorForm({
                         handleInputChange("email", event.target.value)
                       }
                       placeholder="customer@example.com"
-                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                     />
                   </div>
                 </div>
@@ -1173,7 +1313,7 @@ export function InvoiceGeneratorForm({
                       handleInputChange("city", event.target.value)
                     }
                     placeholder="Enter city"
-                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                   />
                 </div>
               </div>
@@ -1201,7 +1341,7 @@ export function InvoiceGeneratorForm({
                       onChange={(event) =>
                         handleInputChange("state", event.target.value)
                       }
-                      className="w-full appearance-none rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                      className="w-full appearance-none rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                     >
                       <option value="">Select State</option>
 
@@ -1268,7 +1408,7 @@ export function InvoiceGeneratorForm({
                         handlePincodeChange(pasted);
                       }}
                       placeholder="6-digit pincode"
-                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-10 pr-4 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                     />
                   </div>
 
@@ -1293,7 +1433,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div>
-                    <h2 className="text-base font-bold text-[#18352c]">
+                    <h2 className="text-base font-bold text-[#18352 Children]">
                       Select Plan
                     </h2>
 
@@ -1338,7 +1478,7 @@ export function InvoiceGeneratorForm({
                       >
                         {plan.featured ? (
                           <ShieldCheck className="h-5 w-5" />
-                        ) : plan.family === "1A" ? (
+                        ) : plan.family === "1 Adult" ? (
                           <User className="h-5 w-5" />
                         ) : (
                           <Hospital className="h-5 w-5" />
@@ -1347,7 +1487,7 @@ export function InvoiceGeneratorForm({
 
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-extrabold text-[#17362c] sm:text-base">
+                          <h3 className="text-sm font-extrabold text-[#17362 Children] sm:text-base">
                             {plan.name}
                           </h3>
 
@@ -1418,7 +1558,7 @@ export function InvoiceGeneratorForm({
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-sm font-extrabold text-[#17362c] sm:text-base">
+                      <h3 className="text-sm font-extrabold text-[#17362 Children] sm:text-base">
                         Custom Plan
                       </h3>
 
@@ -1451,7 +1591,7 @@ export function InvoiceGeneratorForm({
             <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-base font-bold text-[#18352c]">
+                  <h2 className="text-base font-bold text-[#18352 Children]">
                     Plan Details
                   </h2>
 
@@ -1482,15 +1622,17 @@ export function InvoiceGeneratorForm({
                   required
                   value={invoiceData.family}
                   onChange={(event) => handleFamilyChange(event.target.value)}
-                  className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                  className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-bold text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                 >
                   <option value="">Select Family</option>
 
-                  <option value="1A">1A</option>
+                  <option value="1 Adult">1 Adult</option>
 
-                  <option value="2A">2A</option>
+                  <option value="2 Adults">2 Adults</option>
 
-                  <option value="2A + 2C">2A + 2C</option>
+                  <option value="2 Adults + 2 Children">
+                    2 Adults + 2 Children
+                  </option>
                 </select>
               </div>
 
@@ -1542,7 +1684,7 @@ export function InvoiceGeneratorForm({
                       handleInputChange("tenure", event.target.value)
                     }
                     placeholder="1 Year"
-                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-medium text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] px-4 py-3 text-sm font-medium text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                   />
                 </div>
 
@@ -1606,7 +1748,7 @@ export function InvoiceGeneratorForm({
                         );
                       }}
                       placeholder="Enter amount"
-                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                      className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                     />
                   </div>
 
@@ -1668,7 +1810,7 @@ export function InvoiceGeneratorForm({
                       );
                     }}
                     placeholder="Enter GST amount"
-                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352c] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
+                    className="w-full rounded-xl border border-[#ccd9d2] bg-[#fbfdfb] py-3 pl-9 pr-4 text-sm font-bold text-[#18352 Children] outline-none transition focus:border-[#4f8b6c] focus:ring-2 focus:ring-[#4f8b6c]/10"
                   />
                 </div>
 
@@ -1701,7 +1843,7 @@ export function InvoiceGeneratorForm({
 
           <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
             <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
-              <h2 className="text-base font-bold text-[#18352c]">
+              <h2 className="text-base font-bold text-[#18352 Children]">
                 Payment Summary
               </h2>
             </div>
@@ -1711,7 +1853,7 @@ export function InvoiceGeneratorForm({
                 <div className="flex items-center justify-between border-b border-[#e3ebe6] pb-3">
                   <span className="text-sm text-[#61756c]">Base Price</span>
 
-                  <span className="text-base font-semibold text-[#18352c]">
+                  <span className="text-base font-semibold text-[#18352 Children]">
                     ₹{formatINR(basePrice)}
                   </span>
                 </div>
@@ -1798,7 +1940,7 @@ export function InvoiceGeneratorForm({
 
           <section className="rounded-2xl border border-[#d8e4dc] bg-white shadow-[0_4px_16px_rgba(31,73,55,0.05)]">
             <div className="border-b border-[#e3ebe6] px-5 py-4 sm:px-6">
-              <h2 className="text-base font-bold text-[#18352c]">
+              <h2 className="text-base font-bold text-[#18352 Children]">
                 Included Benefits
               </h2>
 
@@ -1833,7 +1975,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
-                    Personal Accident Cover-Sum Insured
+                    Personal Accident Cover Benefit
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
@@ -1849,7 +1991,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
-                    Accidental Death
+                    Accidental Death Benefit
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
@@ -1865,7 +2007,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
-                    PPD
+                    Permanent Partial Disablement
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
@@ -1881,7 +2023,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
-                    PTD
+                    Permanent Total Disablement
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
@@ -1897,7 +2039,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
-                    Claims payout-PA
+                    Claims payout - Personal Accident Medical Benefit
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
@@ -1917,7 +2059,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
-                    Rs. 1000
+                    Rs. 1000 /- Per day max 30 days
                   </div>
                 </div>
 
@@ -1929,7 +2071,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
-                    Daily Cash Benefit
+                    Daily Cash Benefits (ICU)
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
@@ -1946,7 +2088,7 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
-                    Daily Cash Benefit
+                    Daily Cash Benefits (ICU)
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
@@ -1963,13 +2105,13 @@ export function InvoiceGeneratorForm({
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] text-[#31463d]">
-                    Daily Cash Benefit
+                    Daily Cash Benefits (ICU)
                   </div>
 
                   <div className="border-l border-[#d6e2de] px-3 py-2.5 text-[10px] leading-relaxed text-[#31463d]">
                     Customers Can Avail This Benefit Only For 30 days in a
-                    Policy Year Collectively For Normal &amp; 15 days in a
-                    Policy
+                    Membership Year Collectively For Normal &amp; 15 days in a
+                    Membership
                   </div>
                 </div>
 
