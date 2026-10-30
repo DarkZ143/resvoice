@@ -26,6 +26,120 @@ const COMPANY_GSTIN = "09AAQCR1885F1ZU";
 
 const COMPANY_CIN = "U86909UW2026OPC257013";
 
+const COMPANY_WEBSITE_URL = "https://restorehealthservices.in";
+
+const COMPANY_WEBSITE_LABEL = "restorehealthservices.in";
+
+/* ==========================================================
+   SOCIAL LINKS
+
+   Anchors carry data-pdf-link so the PDF export can place
+   clickable link areas over them (the PDF itself is built
+   from page screenshots).
+========================================================== */
+
+type SocialName = "Facebook" | "Instagram" | "LinkedIn";
+
+const SOCIAL_LINKS: { name: SocialName; url: string }[] = [
+  {
+    name: "Facebook",
+    url: "https://www.facebook.com/people/Restore-Health-Services/61593356123847/",
+  },
+  {
+    name: "Instagram",
+    url: "https://www.instagram.com/restorehealthservices/",
+  },
+  {
+    name: "LinkedIn",
+    url: "https://www.linkedin.com/company/restore-health-services/?viewAsMember=true",
+  },
+];
+
+const SOCIAL_BACKGROUNDS: Record<SocialName, string> = {
+  Facebook: "#1877F2",
+  Instagram:
+    "linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%)",
+  LinkedIn: "#0A66C2",
+};
+
+function SocialIcon({ name, size }: { name: SocialName; size: number }) {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center justify-center rounded-[22%]"
+      style={{
+        width: size,
+        height: size,
+        background: SOCIAL_BACKGROUNDS[name],
+      }}
+    >
+      <svg
+        viewBox="0 0 24 24"
+        width={size * 0.72}
+        height={size * 0.72}
+        aria-hidden="true"
+      >
+        {name === "Facebook" && (
+          <path
+            fill="#ffffff"
+            d="M13.6 22v-8.1h2.7l.4-3.2h-3.1V8.7c0-.9.3-1.5 1.6-1.5h1.7V4.3c-.3 0-1.3-.1-2.4-.1-2.4 0-4 1.4-4 4.1v2.4H7.8v3.2h2.7V22h3.1z"
+          />
+        )}
+
+        {name === "Instagram" && (
+          <g fill="none" stroke="#ffffff" strokeWidth="2">
+            <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+            <circle cx="12" cy="12" r="4" />
+            <circle cx="17.3" cy="6.7" r="0.6" fill="#ffffff" />
+          </g>
+        )}
+
+        {name === "LinkedIn" && (
+          <g fill="#ffffff">
+            <rect x="4" y="9" width="3.4" height="11" />
+            <circle cx="5.7" cy="5.6" r="2" />
+            <path d="M10 9h3.3v1.5c.5-.9 1.6-1.8 3.4-1.8 3.4 0 4 2.2 4 5.1V20h-3.4v-5.4c0-1.3 0-2.9-1.8-2.9s-2.1 1.4-2.1 2.8V20H10z" />
+          </g>
+        )}
+      </svg>
+    </span>
+  );
+}
+
+function SocialLinks({
+  size = 18,
+  showLabels = false,
+  className = "",
+}: {
+  size?: number;
+  showLabels?: boolean;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${className}`}>
+      {SOCIAL_LINKS.map((social) => (
+        <a
+          key={social.name}
+          href={social.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`${COMPANY_NAME} on ${social.name}`}
+          title={social.name}
+          data-pdf-link={social.url}
+          className="inline-flex items-center gap-1 transition hover:opacity-80"
+        >
+          <SocialIcon name={social.name} size={size} />
+
+          {showLabels && (
+            <span className="text-[8px] font-extrabold text-[#173f31]">
+              {social.name}
+            </span>
+          )}
+        </a>
+      ))}
+    </div>
+  );
+}
+
 const COMPANY_PHONE = "9289250468";
 
 const COMPANY_WEBSITE = "restorehealthservices.in";
@@ -470,7 +584,26 @@ export function InvoiceViewer({
     element.style.minHeight = "1123px";
 
     try {
-      return await toCanvas(element, {
+      const pageRect = element.getBoundingClientRect();
+      const ratio = pageRect.width ? 794 / pageRect.width : 1;
+
+      const links = Array.from(
+        element.querySelectorAll<HTMLElement>("[data-pdf-link]"),
+      )
+        .map((anchor) => {
+          const rect = anchor.getBoundingClientRect();
+
+          return {
+            url: anchor.dataset.pdfLink ?? "",
+            left: (rect.left - pageRect.left) * ratio,
+            top: (rect.top - pageRect.top) * ratio,
+            width: rect.width * ratio,
+            height: rect.height * ratio,
+          };
+        })
+        .filter((link) => link.url && link.width > 0 && link.height > 0);
+
+      const canvas = await toCanvas(element, {
         width: 794,
         height: 1123,
         pixelRatio: 2,
@@ -479,6 +612,8 @@ export function InvoiceViewer({
         skipFonts: false,
         imagePlaceholder: undefined,
       });
+
+      return { canvas, links };
     } finally {
       element.style.width = previousWidth;
       element.style.maxWidth = previousMaxWidth;
@@ -522,19 +657,19 @@ export function InvoiceViewer({
          CAPTURE PAGE 1
       ================================================== */
 
-      const canvas1 = await capturePage(page1, toCanvas);
+      const capture1 = await capturePage(page1, toCanvas);
 
       /* ==================================================
          CAPTURE PAGE 2
       ================================================== */
 
-      const canvas2 = await capturePage(page2, toCanvas);
+      const capture2 = await capturePage(page2, toCanvas);
 
       /* ==================================================
          CAPTURE PAGE 3
       ================================================== */
 
-      const canvas3 = await capturePage(page3, toCanvas);
+      const capture3 = await capturePage(page3, toCanvas);
 
       /* ==================================================
          CREATE A4 PDF
@@ -561,7 +696,10 @@ export function InvoiceViewer({
          ADD CANVAS WITHOUT CROPPING
       ================================================== */
 
-      const addCanvasToPage = (canvas: HTMLCanvasElement) => {
+      const addCanvasToPage = ({
+        canvas,
+        links,
+      }: Awaited<ReturnType<typeof capturePage>>) => {
         const scale = Math.min(
           printableWidth / canvas.width,
           printableHeight / canvas.height,
@@ -585,13 +723,26 @@ export function InvoiceViewer({
           undefined,
           "FAST",
         );
+
+        /* Clickable website / social link areas */
+        const mmPerPx = imageWidth / 794;
+
+        links.forEach((link) => {
+          pdf.link(
+            x + link.left * mmPerPx,
+            y + link.top * mmPerPx,
+            link.width * mmPerPx,
+            link.height * mmPerPx,
+            { url: link.url },
+          );
+        });
       };
 
       /* ==================================================
          PAGE 1
       ================================================== */
 
-      addCanvasToPage(canvas1);
+      addCanvasToPage(capture1);
 
       /* ==================================================
          PAGE 2
@@ -599,7 +750,7 @@ export function InvoiceViewer({
 
       pdf.addPage();
 
-      addCanvasToPage(canvas2);
+      addCanvasToPage(capture2);
 
       /* ==================================================
          PAGE 3
@@ -607,7 +758,7 @@ export function InvoiceViewer({
 
       pdf.addPage();
 
-      addCanvasToPage(canvas3);
+      addCanvasToPage(capture3);
 
       /* ==================================================
          FILE NAME = PHONE NUMBER
@@ -658,6 +809,7 @@ export function InvoiceViewer({
     const summary = `Restore Health Services
 ${COMPANY_ADDRESS}
 GSTIN: ${COMPANY_GSTIN}
+Website: ${COMPANY_WEBSITE_URL}
 CIN: ${COMPANY_CIN}
 Phone: ${COMPANY_PHONE}
 Website: ${COMPANY_WEBSITE}
@@ -809,9 +961,26 @@ Payment Status: ${paymentStatus}`;
                   </p>
 
                   <div className="mt-2 space-y-0.5 text-[9px] font-bold tracking-wide text-[#536c61]">
-                    <p>
-                      GSTIN :{" "}
-                      <span className="text-[#176746]">{COMPANY_GSTIN}</span>
+                    <p className="flex flex-wrap items-center gap-x-2">
+                      <span>
+                        GSTIN :{" "}
+                        <span className="text-[#176746]">{COMPANY_GSTIN}</span>
+                      </span>
+
+                      <span className="text-[#c3d2ca]">|</span>
+
+                      <span>
+                        Website :{" "}
+                        <a
+                          href={COMPANY_WEBSITE_URL}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          data-pdf-link={COMPANY_WEBSITE_URL}
+                          className="text-[#176746] underline decoration-[#9cc5ad] underline-offset-2 hover:text-[#0b4f33]"
+                        >
+                          {COMPANY_WEBSITE_LABEL}
+                        </a>
+                      </span>
                     </p>
 
                     <p>
@@ -844,6 +1013,8 @@ Payment Status: ${paymentStatus}`;
                 <p className="mt-1 text-[12px] font-extrabold text-[#18352c]">
                   {invoiceDate}
                 </p>
+
+                <SocialLinks size={18} className="mt-3 justify-end" />
               </div>
             </div>
 
@@ -1651,6 +1822,15 @@ Payment Status: ${paymentStatus}`;
                     ))}
                   </div>
                 </div>
+              </div>
+
+              {/* FOLLOW US */}
+              <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-[#d8e2dc] bg-[#f7faf7] px-3 py-1.5">
+                <p className="text-[8.5px] font-extrabold uppercase tracking-wide text-[#075e3d]">
+                  Follow us
+                </p>
+
+                <SocialLinks size={16} showLabels className="justify-end gap-3" />
               </div>
 
               {/* COMPANY DETAILS */}
