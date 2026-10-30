@@ -108,10 +108,12 @@ function SocialIcon({ name, size }: { name: SocialName; size: number }) {
 function SocialLinks({
   size = 18,
   showLabels = false,
+  labelClassName = "text-[8px]",
   className = "",
 }: {
   size?: number;
   showLabels?: boolean;
+  labelClassName?: string;
   className?: string;
 }) {
   return (
@@ -130,7 +132,7 @@ function SocialLinks({
           <SocialIcon name={social.name} size={size} />
 
           {showLabels && (
-            <span className="text-[8px] font-extrabold text-[#173f31]">
+            <span className={`${labelClassName} font-extrabold text-[#173f31]`}>
               {social.name}
             </span>
           )}
@@ -1825,12 +1827,32 @@ Payment Status: ${paymentStatus}`;
               </div>
 
               {/* FOLLOW US */}
-              <div className="mt-2 flex items-center justify-between gap-3 rounded-lg border border-[#d8e2dc] bg-[#f7faf7] px-3 py-1.5">
-                <p className="text-[8.5px] font-extrabold uppercase tracking-wide text-[#075e3d]">
-                  Follow us
-                </p>
+              <div className="mt-2 flex items-center justify-between gap-4 rounded-lg border border-[#d8e2dc] bg-[#f7faf7] px-4 py-2.5">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#075e3d]">
+                    Follow us
+                  </p>
 
-                <SocialLinks size={16} showLabels className="justify-end gap-3" />
+                  <p className="mt-1 text-[9.5px] font-bold text-[#536c61]">
+                    Website :{" "}
+                    <a
+                      href={COMPANY_WEBSITE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      data-pdf-link={COMPANY_WEBSITE_URL}
+                      className="text-[#176746] underline decoration-[#9cc5ad] underline-offset-2 hover:text-[#0b4f33]"
+                    >
+                      {COMPANY_WEBSITE_LABEL}
+                    </a>
+                  </p>
+                </div>
+
+                <SocialLinks
+                  size={26}
+                  showLabels
+                  labelClassName="text-[10px]"
+                  className="justify-end gap-4"
+                />
               </div>
 
               {/* COMPANY DETAILS */}
